@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ov-slate: #0f172a;
+  --color-ov-glow-blue: #1e3a5f;
+  --color-ov-glow-purple: #3b2f5a;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #030712;
+  color: #f8fafc;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mesh + radial glows — Marcelo-style 2026 base */
+.ov-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #020617;
+  background-image:
+    radial-gradient(
+      ellipse 120% 80% at 0% 0%,
+      rgba(30, 58, 95, 0.45) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 100% 90% at 100% 100%,
+      rgba(88, 63, 139, 0.35) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.97) 0%,
+        rgba(3, 7, 18, 0.98) 40%,
+        rgba(15, 23, 42, 0.95) 100%
+      ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(255, 255, 255, 0.02) 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 3px
+    );
+}
