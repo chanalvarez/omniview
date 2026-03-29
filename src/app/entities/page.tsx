@@ -1,14 +1,18 @@
 "use client";
 
 import { AddEntityModal } from "@/components/AddEntityModal";
+import { ConfirmDeleteEntityModal } from "@/components/ConfirmDeleteEntityModal";
+import { EditEntityModal } from "@/components/EditEntityModal";
 import { GlassCard } from "@/components/GlassCard";
+import type { CustomEntity } from "@/context/portfolio-entities-context";
 import { usePortfolioEntities } from "@/context/portfolio-entities-context";
-import { Building2, ChevronRight, Plus } from "lucide-react";
+import { Building2, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 const BUILT_IN = [
   {
+    slug: "servewise",
     name: "ServeWise",
     detail: "Scheduling and field appointments, surfaced on Home.",
     badge: "Active",
@@ -16,6 +20,7 @@ const BUILT_IN = [
       "border-emerald-400/25 bg-emerald-400/10 text-emerald-300/95",
   },
   {
+    slug: "scanly",
     name: "Scanly",
     detail: "Inventory counts and stock health, surfaced on Home.",
     badge: "Synced",
@@ -24,8 +29,16 @@ const BUILT_IN = [
 ] as const;
 
 export default function EntitiesPage() {
-  const { addEntity, customEntities, hydrated } = usePortfolioEntities();
+  const {
+    addEntity,
+    customEntities,
+    hydrated,
+    removeEntity,
+    updateEntity,
+  } = usePortfolioEntities();
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<CustomEntity | null>(null);
+  const [deleting, setDeleting] = useState<CustomEntity | null>(null);
 
   return (
     <div className="px-5 py-8 md:px-8 md:py-10 lg:px-12">
@@ -59,21 +72,33 @@ export default function EntitiesPage() {
           </h2>
           <div className="grid gap-3 md:grid-cols-2">
             {BUILT_IN.map((row) => (
-              <GlassCard key={row.name} className="p-5" delay={0}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-semibold text-white">{row.name}</p>
-                    <p className="mt-1 text-sm leading-relaxed text-white/50">
-                      {row.detail}
-                    </p>
+              <Link
+                key={row.slug}
+                href={`/entities/${row.slug}`}
+                className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
+              >
+                <GlassCard
+                  className="h-full p-5 transition hover:border-white/[0.14] hover:bg-[rgba(15,23,42,0.72)]"
+                  delay={0}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold text-white">{row.name}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-white/50">
+                        {row.detail}
+                      </p>
+                      <p className="mt-3 text-xs font-medium text-blue-300/80">
+                        View analytics →
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${row.badgeClass}`}
+                    >
+                      {row.badge}
+                    </span>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${row.badgeClass}`}
-                  >
-                    {row.badge}
-                  </span>
-                </div>
-              </GlassCard>
+                </GlassCard>
+              </Link>
             ))}
           </div>
         </section>
@@ -107,13 +132,13 @@ export default function EntitiesPage() {
           ) : (
             <ul className="space-y-2">
               {customEntities.map((e) => (
-                <li key={e.id}>
+                <li key={e.id} className="flex items-stretch gap-2">
                   <Link
                     href={`/entities/${e.id}`}
-                    className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
+                    className="min-w-0 flex-1 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
                   >
                     <GlassCard
-                      className="p-4 transition hover:border-white/[0.14] hover:bg-[rgba(15,23,42,0.72)]"
+                      className="h-full p-4 transition hover:border-white/[0.14] hover:bg-[rgba(15,23,42,0.72)]"
                       delay={0}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -132,6 +157,26 @@ export default function EntitiesPage() {
                       </div>
                     </GlassCard>
                   </Link>
+                  <div className="flex shrink-0 flex-col gap-1.5 py-0.5 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(e)}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:border-white/18 hover:bg-white/[0.08] hover:text-white"
+                      aria-label={`Edit ${e.name}`}
+                      title="Edit entity"
+                    >
+                      <Pencil className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleting(e)}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-rose-400/20 bg-rose-500/[0.07] text-rose-300/90 transition hover:border-rose-400/35 hover:bg-rose-500/15"
+                      aria-label={`Delete ${e.name}`}
+                      title="Delete entity"
+                    >
+                      <Trash2 className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -140,6 +185,24 @@ export default function EntitiesPage() {
       </div>
 
       <AddEntityModal open={addOpen} onOpenChange={setAddOpen} onAdd={addEntity} />
+      <EditEntityModal
+        entity={editing}
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null);
+        }}
+        onSave={(id, input) => updateEntity(id, input)}
+      />
+      <ConfirmDeleteEntityModal
+        entityName={deleting?.name ?? null}
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+        onConfirm={() => {
+          if (deleting) removeEntity(deleting.id);
+        }}
+      />
     </div>
   );
 }

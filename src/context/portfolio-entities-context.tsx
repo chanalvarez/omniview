@@ -22,6 +22,11 @@ const STORAGE_KEY = "omniview.entities.v1";
 type PortfolioEntitiesContextValue = {
   customEntities: CustomEntity[];
   addEntity: (input: { name: string; tagline: string }) => CustomEntity | null;
+  updateEntity: (
+    id: string,
+    input: { name: string; tagline: string },
+  ) => boolean;
+  removeEntity: (id: string) => void;
   hydrated: boolean;
 };
 
@@ -71,9 +76,34 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
     return entity;
   }, []);
 
+  const updateEntity = useCallback(
+    (id: string, input: { name: string; tagline: string }): boolean => {
+      const name = input.name.trim();
+      if (!name) return false;
+      const tagline = input.tagline.trim();
+      setCustomEntities((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, name, tagline } : e,
+        ),
+      );
+      return true;
+    },
+    [],
+  );
+
+  const removeEntity = useCallback((id: string) => {
+    setCustomEntities((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   const value = useMemo(
-    () => ({ customEntities, addEntity, hydrated }),
-    [customEntities, addEntity, hydrated],
+    () => ({
+      customEntities,
+      addEntity,
+      updateEntity,
+      removeEntity,
+      hydrated,
+    }),
+    [customEntities, addEntity, updateEntity, removeEntity, hydrated],
   );
 
   return (

@@ -4,7 +4,14 @@ import { AddEntityModal } from "@/components/AddEntityModal";
 import { GlassCard } from "@/components/GlassCard";
 import { formatPhpThousandsK } from "@/lib/format/php";
 import { usePortfolioEntities } from "@/context/portfolio-entities-context";
-import { Building2, CalendarClock, Package, Plus, TrendingUp } from "lucide-react";
+import {
+  ArrowUpRight,
+  Building2,
+  CalendarClock,
+  Package,
+  Plus,
+  TrendingUp,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -43,7 +50,14 @@ export function EntityGrid() {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <GlassCard delay={0.22} className="p-5">
+        <Link
+          href="/entities/servewise"
+          className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
+        >
+          <GlassCard
+            delay={0.22}
+            className="h-full p-5 transition group-hover:border-white/[0.14] group-hover:bg-[rgba(15,23,42,0.72)]"
+          >
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-white/45">
@@ -102,13 +116,27 @@ export function EntityGrid() {
               </ResponsiveContainer>
             </div>
           </div>
-          <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300/90">
-            <TrendingUp className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-            Trending up
+          <p className="mt-3 flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300/90">
+              <TrendingUp className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+              Trending up
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-white/40 transition group-hover:text-white/60">
+              Analytics
+              <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+            </span>
           </p>
         </GlassCard>
+        </Link>
 
-        <GlassCard delay={0.28} className="p-5">
+        <Link
+          href="/entities/scanly"
+          className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
+        >
+          <GlassCard
+            delay={0.28}
+            className="h-full p-5 transition group-hover:border-white/[0.14] group-hover:bg-[rgba(15,23,42,0.72)]"
+          >
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-white/45">
@@ -184,13 +212,20 @@ export function EntityGrid() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          <p className="mt-3 flex justify-end">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-white/40 transition group-hover:text-white/60">
+              Analytics
+              <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+            </span>
+          </p>
         </GlassCard>
+        </Link>
 
         {customEntities.map((entity, i) => (
           <Link
             key={entity.id}
             href={`/entities/${entity.id}`}
-            className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
+            className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
           >
             <GlassCard
               delay={0.32 + i * 0.05}
@@ -221,8 +256,9 @@ export function EntityGrid() {
                   New
                 </span>
               </div>
-              <div className="mt-4 rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-3 text-center text-xs text-white/45">
-                Open for connection steps and metrics. Click to view details.
+              <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-3 py-3 text-xs text-white/45">
+                <span>Connection steps &amp; metrics</span>
+                <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-white/35 transition group-hover:text-white/55" aria-hidden />
               </div>
             </GlassCard>
           </Link>
