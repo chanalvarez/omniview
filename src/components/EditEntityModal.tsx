@@ -71,7 +71,7 @@ export function EditEntityModal({
         <div className="border-b border-white/[0.08] px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <h2 id={titleId} className="text-lg font-semibold text-white">
-              Edit entity
+              Edit business
             </h2>
             <button
               type="button"

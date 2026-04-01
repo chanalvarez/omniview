@@ -2,33 +2,43 @@
 
 import { GlassCard } from "@/components/GlassCard";
 import { formatPhpCompact } from "@/lib/format/php";
+import { usePortfolioEntities } from "@/context/portfolio-entities-context";
 import { AlertTriangle, TrendingUp, Wallet } from "lucide-react";
 
 const PORTFOLIO_REVENUE_PHP = 158_400_000;
 const PORTFOLIO_NET_PROFIT_PHP = 34_300_000;
 
-const stats = [
-  {
-    label: "Total Portfolio Revenue",
-    getValue: () => formatPhpCompact(PORTFOLIO_REVENUE_PHP),
-    sub: "+12.4% vs last quarter",
-    icon: Wallet,
-  },
-  {
-    label: "Total Net Profit",
-    getValue: () => formatPhpCompact(PORTFOLIO_NET_PROFIT_PHP),
-    sub: "Margin 21.5%",
-    icon: TrendingUp,
-  },
-  {
-    label: "Global Alerts",
-    getValue: () => "7",
-    sub: "2 critical · 5 watchlist",
-    icon: AlertTriangle,
-  },
-] as const;
-
 export function PortfolioStats() {
+  const { customEntities, hydrated } = usePortfolioEntities();
+  const hasBusinesses = hydrated && customEntities.length > 0;
+
+  const stats = [
+    {
+      label: "Total Portfolio Revenue",
+      getValue: () =>
+        hasBusinesses ? formatPhpCompact(PORTFOLIO_REVENUE_PHP) : "—",
+      sub: hasBusinesses
+        ? "+12.4% vs last quarter"
+        : "Add a business to populate your portfolio",
+      icon: Wallet,
+    },
+    {
+      label: "Total Net Profit",
+      getValue: () =>
+        hasBusinesses ? formatPhpCompact(PORTFOLIO_NET_PROFIT_PHP) : "—",
+      sub: hasBusinesses ? "Margin 21.5%" : "—",
+      icon: TrendingUp,
+    },
+    {
+      label: "Global Alerts",
+      getValue: () => (hasBusinesses ? "7" : "—"),
+      sub: hasBusinesses
+        ? "2 critical · 5 watchlist"
+        : "No businesses linked yet",
+      icon: AlertTriangle,
+    },
+  ] as const;
+
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {stats.map((s, i) => (

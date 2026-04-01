@@ -3,14 +3,13 @@
 import { GlassCard } from "@/components/GlassCard";
 import type { CustomEntity } from "@/context/portfolio-entities-context";
 import { X } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 
 type AddEntityModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (input: { name: string; tagline: string }) => CustomEntity | null;
+  onAdd: (input: { name: string; tagline?: string }) => CustomEntity | null;
 };
 
 export function AddEntityModal({
@@ -21,7 +20,6 @@ export function AddEntityModal({
   const titleId = useId();
   const router = useRouter();
   const [name, setName] = useState("");
-  const [tagline, setTagline] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -33,10 +31,7 @@ export function AddEntityModal({
   }, [open, onOpenChange]);
 
   useEffect(() => {
-    if (open) {
-      setName("");
-      setTagline("");
-    }
+    if (open) setName("");
   }, [open]);
 
   if (!open) return null;
@@ -44,7 +39,7 @@ export function AddEntityModal({
   const submit = () => {
     const n = name.trim();
     if (!n) return;
-    const created = onAdd({ name: n, tagline: tagline.trim() });
+    const created = onAdd({ name: n });
     onOpenChange(false);
     if (created) router.push(`/entities/${created.id}`);
   };
@@ -72,7 +67,7 @@ export function AddEntityModal({
         <div className="border-b border-white/[0.08] px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <h2 id={titleId} className="text-lg font-semibold text-white">
-              New entity
+              New business
             </h2>
             <button
               type="button"
@@ -84,56 +79,28 @@ export function AddEntityModal({
             </button>
           </div>
           <p className="mt-1 text-sm text-white/50">
-            Register a business in your portfolio. It appears on Home and under
-            Entities. Linking data (accounting, inventory, etc.) is done in{" "}
-            <Link
-              href="/settings"
-              className="text-blue-300/90 underline decoration-white/15 underline-offset-2 hover:text-white"
-            >
-              Settings
-            </Link>{" "}
-            or via your Supabase schema (tenant id per entity).
+            Type the business name. OmniView links it to your workspace right away so
+            you can monitor it from Home and Businesses, nothing else required.
           </p>
         </div>
         <div className="space-y-4 px-5 py-5">
           <div>
             <label
-              htmlFor="entity-name"
+              htmlFor="business-name"
               className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
             >
               Business name
             </label>
             <input
-              id="entity-name"
+              id="business-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Harbor Logistics"
               className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 outline-none ring-blue-400/30 focus:ring-2"
               autoComplete="organization"
+              autoFocus
             />
           </div>
-          <div>
-            <label
-              htmlFor="entity-tagline"
-              className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
-            >
-              Short description{" "}
-              <span className="font-normal normal-case text-white/35">(optional)</span>
-            </label>
-            <input
-              id="entity-tagline"
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              placeholder="One line about what it does"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 outline-none ring-blue-400/30 focus:ring-2"
-            />
-          </div>
-          <p className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-xs leading-relaxed text-white/45">
-            <strong className="font-medium text-white/65">Connect another business:</strong>{" "}
-            OmniView stores this name locally for now. To attach real metrics, map
-            each entity to a tenant row in Supabase (or your API) and pull KPIs in
-            the entity detail screen.
-          </p>
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
@@ -148,7 +115,7 @@ export function AddEntityModal({
               disabled={!name.trim()}
               className="rounded-xl border border-white/15 bg-gradient-to-r from-blue-500/25 to-violet-500/25 px-4 py-2.5 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Add to portfolio
+              Add &amp; connect
             </button>
           </div>
         </div>

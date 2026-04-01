@@ -27,7 +27,7 @@ export function formatPhpAxisMillions(millions: number): string {
   return `₱${millions}M`;
 }
 
-/** Thousands for small charts, e.g. Scanly monthly chunks. */
+/** Thousands for small charts (e.g. monthly revenue in ₱K). */
 export function formatPhpThousandsK(thousands: number): string {
   return `₱${thousands}K`;
 }

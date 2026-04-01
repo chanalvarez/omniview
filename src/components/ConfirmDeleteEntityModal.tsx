@@ -58,12 +58,11 @@ export function ConfirmDeleteEntityModal({
               </div>
               <div>
                 <h2 id={titleId} className="text-lg font-semibold text-white">
-                  Remove entity?
+                  Remove business?
                 </h2>
                 <p className="mt-1 text-sm text-white/50">
                   <span className="font-medium text-white/75">{entityName}</span> will be
-                  removed from OmniView on this device. This does not delete data in
-                  Supabase or other systems.
+                  removed from OmniView on this device.
                 </p>
               </div>
             </div>
@@ -93,7 +92,7 @@ export function ConfirmDeleteEntityModal({
             }}
             className="rounded-xl border border-rose-400/35 bg-rose-500/15 px-4 py-2.5 text-sm font-medium text-rose-100 transition hover:bg-rose-500/25"
           >
-            Delete entity
+            Delete business
           </button>
         </div>
       </GlassCard>

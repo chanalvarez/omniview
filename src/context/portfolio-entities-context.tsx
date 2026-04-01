@@ -17,11 +17,12 @@ export type CustomEntity = {
   createdAt: number;
 };
 
-const STORAGE_KEY = "omniview.entities.v1";
+const STORAGE_KEY = "omniview.businesses.v1";
+const LEGACY_STORAGE_KEY = "omniview.entities.v1";
 
 type PortfolioEntitiesContextValue = {
   customEntities: CustomEntity[];
-  addEntity: (input: { name: string; tagline: string }) => CustomEntity | null;
+  addEntity: (input: { name: string; tagline?: string }) => CustomEntity | null;
   updateEntity: (
     id: string,
     input: { name: string; tagline: string },
@@ -33,13 +34,29 @@ type PortfolioEntitiesContextValue = {
 const PortfolioEntitiesContext =
   createContext<PortfolioEntitiesContextValue | null>(null);
 
+function migrateLegacyStorage(): string | null {
+  try {
+    const next = localStorage.getItem(STORAGE_KEY);
+    if (next) return next;
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy) {
+      localStorage.setItem(STORAGE_KEY, legacy);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      return legacy;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export function PortfolioEntitiesProvider({ children }: { children: ReactNode }) {
   const [customEntities, setCustomEntities] = useState<CustomEntity[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = migrateLegacyStorage();
       if (raw) {
         const parsed = JSON.parse(raw) as CustomEntity[];
         if (Array.isArray(parsed)) setCustomEntities(parsed);
@@ -61,11 +78,11 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
   const addEntity = useCallback((input: {
     name: string;
-    tagline: string;
+    tagline?: string;
   }): CustomEntity | null => {
     const name = input.name.trim();
     if (!name) return null;
-    const tagline = input.tagline.trim();
+    const tagline = (input.tagline ?? "").trim();
     const entity: CustomEntity = {
       id: crypto.randomUUID(),
       name,

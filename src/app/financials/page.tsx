@@ -11,7 +11,7 @@ export default function FinancialsPage() {
         <div>
           <h1 className="text-xl font-semibold text-white">Financials</h1>
           <p className="text-sm text-white/50">
-            Money across your portfolio, P&amp;L, cash, and rollups by entity.
+            Money across your portfolio, P&amp;L, cash, and rollups by business.
           </p>
         </div>
       </header>
@@ -21,9 +21,9 @@ export default function FinancialsPage() {
           This area is reserved for <strong className="font-medium text-white/90">financial reporting</strong>
           : income statements, balance sheet summaries, burn rate, consolidated
           numbers in <strong className="font-medium text-white/90">PHP</strong>, and
-          per-entity breakdowns. The Home dashboard already shows high-level
+          per-business breakdowns. The Home dashboard already shows high-level
           revenue and profit; Financials is where you drill into statements and
-          export views once your ledger or Supabase models are connected.
+          export views once your accounting data is connected.
         </p>
         <p className="text-sm text-white/45">
           This section is prepared for detailed statements and exports as your ledger

@@ -10,25 +10,7 @@ import { Building2, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-const BUILT_IN = [
-  {
-    slug: "servewise",
-    name: "ServeWise",
-    detail: "Scheduling and field appointments, surfaced on Home.",
-    badge: "Active",
-    badgeClass:
-      "border-emerald-400/25 bg-emerald-400/10 text-emerald-300/95",
-  },
-  {
-    slug: "scanly",
-    name: "Scanly",
-    detail: "Inventory counts and stock health, surfaced on Home.",
-    badge: "Synced",
-    badgeClass: "border-blue-400/25 bg-blue-400/10 text-blue-200/95",
-  },
-] as const;
-
-export default function EntitiesPage() {
+export default function BusinessesPage() {
   const {
     addEntity,
     customEntities,
@@ -48,10 +30,9 @@ export default function EntitiesPage() {
             <Building2 className="h-5 w-5 text-white/70" strokeWidth={1.75} />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-white">Entities</h1>
+            <h1 className="text-xl font-semibold text-white">Businesses</h1>
             <p className="text-sm text-white/50">
-              Every company in your portfolio, built-in products plus entities you
-              add.
+              Companies you monitor in OmniView. Add a name to connect each one.
             </p>
           </div>
         </div>
@@ -61,128 +42,98 @@ export default function EntitiesPage() {
           className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/[0.12]"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
-          New entity
+          New business
         </button>
       </header>
 
-      <div className="space-y-6">
-        <section>
-          <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-white/40">
-            OmniView products
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {BUILT_IN.map((row) => (
-              <Link
-                key={row.slug}
-                href={`/entities/${row.slug}`}
-                className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
-              >
-                <GlassCard
-                  className="h-full p-5 transition hover:border-white/[0.14] hover:bg-[rgba(15,23,42,0.72)]"
-                  delay={0}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-lg font-semibold text-white">{row.name}</p>
-                      <p className="mt-1 text-sm leading-relaxed text-white/50">
-                        {row.detail}
-                      </p>
-                      <p className="mt-3 text-xs font-medium text-blue-300/80">
-                        View analytics →
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${row.badgeClass}`}
-                    >
-                      {row.badge}
-                    </span>
-                  </div>
-                </GlassCard>
-              </Link>
-            ))}
-          </div>
-        </section>
+      <section>
+        <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-white/40">
+          Your businesses
+          {!hydrated ? (
+            <span className="ml-2 font-normal normal-case text-white/35">
+              Loading…
+            </span>
+          ) : null}
+        </h2>
 
-        <section>
-          <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-white/40">
-            Your entities
-            {!hydrated ? (
-              <span className="ml-2 font-normal normal-case text-white/35">
-                Loading…
-              </span>
-            ) : null}
-          </h2>
-          {customEntities.length === 0 && hydrated ? (
-            <GlassCard className="p-8 text-center" delay={0}>
-              <p className="text-white/55">
-                You haven&apos;t added a custom entity yet. Use{" "}
-                <strong className="font-medium text-white/80">New entity</strong>{" "}
-                or the <strong className="font-medium text-white/80">Add a business</strong>{" "}
-                card on Home.
-              </p>
-              <button
-                type="button"
-                onClick={() => setAddOpen(true)}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-dashed border-white/20 px-4 py-2 text-sm text-white/70 transition hover:border-white/30 hover:text-white"
-              >
-                <Plus className="h-4 w-4" />
-                Add your first entity
-              </button>
-            </GlassCard>
-          ) : (
-            <ul className="space-y-2">
-              {customEntities.map((e) => (
-                <li key={e.id} className="flex items-stretch gap-2">
-                  <Link
-                    href={`/entities/${e.id}`}
-                    className="min-w-0 flex-1 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
+        {customEntities.length === 0 && hydrated ? (
+          <GlassCard className="p-8 text-center" delay={0}>
+            <p className="text-white/55">
+              No businesses yet. Use <strong className="font-medium text-white/80">New business</strong>{" "}
+              or the <strong className="font-medium text-white/80">Add a business</strong> card on Home.
+              Just enter a name, OmniView connects it for you.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-dashed border-white/20 px-4 py-2 text-sm text-white/70 transition hover:border-white/30 hover:text-white"
+            >
+              <Plus className="h-4 w-4" />
+              Add your first business
+            </button>
+          </GlassCard>
+        ) : (
+          <ul className="space-y-2">
+            {customEntities.map((e) => (
+              <li key={e.id} className="flex items-stretch gap-2">
+                <Link
+                  href={`/entities/${e.id}`}
+                  className="min-w-0 flex-1 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45"
+                >
+                  <GlassCard
+                    className="h-full p-4 transition hover:border-white/[0.14] hover:bg-[rgba(15,23,42,0.72)]"
+                    delay={0}
                   >
-                    <GlassCard
-                      className="h-full p-4 transition hover:border-white/[0.14] hover:bg-[rgba(15,23,42,0.72)]"
-                      delay={0}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-white">{e.name}</p>
-                          {e.tagline ? (
-                            <p className="mt-0.5 truncate text-sm text-white/50">
-                              {e.tagline}
-                            </p>
-                          ) : null}
+                          <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300/95">
+                            Connected
+                          </span>
                         </div>
-                        <ChevronRight
-                          className="h-5 w-5 shrink-0 text-white/40"
-                          aria-hidden
-                        />
+                        {e.tagline ? (
+                          <p className="mt-0.5 truncate text-sm text-white/50">
+                            {e.tagline}
+                          </p>
+                        ) : (
+                          <p className="mt-0.5 text-sm text-white/40">
+                            Linked to your workspace
+                          </p>
+                        )}
                       </div>
-                    </GlassCard>
-                  </Link>
-                  <div className="flex shrink-0 flex-col gap-1.5 py-0.5 sm:flex-row sm:items-center">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(e)}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:border-white/18 hover:bg-white/[0.08] hover:text-white"
-                      aria-label={`Edit ${e.name}`}
-                      title="Edit entity"
-                    >
-                      <Pencil className="h-4 w-4" strokeWidth={2} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleting(e)}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-rose-400/20 bg-rose-500/[0.07] text-rose-300/90 transition hover:border-rose-400/35 hover:bg-rose-500/15"
-                      aria-label={`Delete ${e.name}`}
-                      title="Delete entity"
-                    >
-                      <Trash2 className="h-4 w-4" strokeWidth={2} />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+                      <ChevronRight
+                        className="h-5 w-5 shrink-0 text-white/40"
+                        aria-hidden
+                      />
+                    </div>
+                  </GlassCard>
+                </Link>
+                <div className="flex shrink-0 flex-col gap-1.5 py-0.5 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(e)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:border-white/18 hover:bg-white/[0.08] hover:text-white"
+                    aria-label={`Edit ${e.name}`}
+                    title="Edit business"
+                  >
+                    <Pencil className="h-4 w-4" strokeWidth={2} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleting(e)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-rose-400/20 bg-rose-500/[0.07] text-rose-300/90 transition hover:border-rose-400/35 hover:bg-rose-500/15"
+                    aria-label={`Delete ${e.name}`}
+                    title="Delete business"
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={2} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <AddEntityModal open={addOpen} onOpenChange={setAddOpen} onAdd={addEntity} />
       <EditEntityModal

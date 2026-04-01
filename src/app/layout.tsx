@@ -1,5 +1,4 @@
 import { Sidebar } from "@/components/Sidebar";
-import { SupabaseInit } from "@/components/SupabaseInit";
 import { PortfolioEntitiesProvider } from "@/context/portfolio-entities-context";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
@@ -31,7 +30,6 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased">
         <div className="ov-canvas" aria-hidden />
-        <SupabaseInit />
         <PortfolioEntitiesProvider>
           <div className="relative z-[1] flex min-h-screen">
             <Sidebar />

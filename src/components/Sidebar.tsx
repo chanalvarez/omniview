@@ -11,7 +11,7 @@ import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/entities", label: "Entities", icon: Building2 },
+  { href: "/entities", label: "Businesses", icon: Building2 },
   { href: "/financials", label: "Financials", icon: Landmark },
   { href: "/settings", label: "Settings", icon: Settings2 },
 ] as const;

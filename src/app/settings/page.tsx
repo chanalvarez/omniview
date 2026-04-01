@@ -19,11 +19,10 @@ export default function SettingsPage() {
       <GlassCard className="space-y-4 p-8">
         <p className="text-base leading-relaxed text-white/70">
           This is the <strong className="font-medium text-white/90">control room</strong> for
-          OmniView: Supabase auth and row-level security for multi-tenant data, API
-          keys for third-party tools, notification rules, currency/locale defaults
-          (you&apos;re on <strong className="font-medium text-white/90">PHP</strong> in the
-          UI), and team access. The sidebar links here so you have a dedicated
-          place for configuration separate from day-to-day KPIs on Home.
+          OmniView: notification preferences, currency and locale (you&apos;re on{" "}
+          <strong className="font-medium text-white/90">PHP</strong> in the UI), team access,
+          and future integrations. Use it for workspace settings separate from the
+          day-to-day KPIs on Home.
         </p>
         <p className="text-sm text-white/45">
           Like Financials, this page is intentionally high-level until you add real
