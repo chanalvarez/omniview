@@ -9,7 +9,10 @@ type EditEntityModalProps = {
   entity: CustomEntity | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (id: string, input: { name: string; tagline: string }) => boolean;
+  onSave: (
+    id: string,
+    input: { name: string; tagline: string },
+  ) => Promise<boolean>;
 };
 
 export function EditEntityModal({
@@ -40,8 +43,8 @@ export function EditEntityModal({
 
   if (!open || !entity) return null;
 
-  const submit = () => {
-    const ok = onSave(entity.id, {
+  const submit = async () => {
+    const ok = await onSave(entity.id, {
       name: name.trim(),
       tagline: tagline.trim(),
     });

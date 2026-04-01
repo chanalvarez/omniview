@@ -1,5 +1,6 @@
 "use client";
 
+import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   createContext,
   useCallback,
@@ -9,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { Session } from "@supabase/supabase-js";
 
 export type CustomEntity = {
   id: string;
@@ -17,22 +19,26 @@ export type CustomEntity = {
   createdAt: number;
 };
 
-const STORAGE_KEY = "omniview.businesses.v1";
-const LEGACY_STORAGE_KEY = "omniview.entities.v1";
-
-type PortfolioEntitiesContextValue = {
-  customEntities: CustomEntity[];
-  addEntity: (input: { name: string; tagline?: string }) => CustomEntity | null;
-  updateEntity: (
-    id: string,
-    input: { name: string; tagline: string },
-  ) => boolean;
-  removeEntity: (id: string) => void;
-  hydrated: boolean;
+type BusinessRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  tagline: string;
+  created_at: string;
 };
 
-const PortfolioEntitiesContext =
-  createContext<PortfolioEntitiesContextValue | null>(null);
+const STORAGE_KEY = "omniview.businesses.v1";
+const LEGACY_STORAGE_KEY = "omniview.entities.v1";
+const MIGRATION_FLAG = "omniview.cloud_migrated_v1";
+
+function mapRow(r: BusinessRow): CustomEntity {
+  return {
+    id: r.id,
+    name: r.name,
+    tagline: r.tagline ?? "",
+    createdAt: new Date(r.created_at).getTime(),
+  };
+}
 
 function migrateLegacyStorage(): string | null {
   try {
@@ -50,67 +56,232 @@ function migrateLegacyStorage(): string | null {
   return null;
 }
 
+function readLocalBusinesses(): CustomEntity[] {
+  try {
+    const raw = migrateLegacyStorage();
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CustomEntity[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+type PortfolioEntitiesContextValue = {
+  customEntities: CustomEntity[];
+  addEntity: (
+    input: { name: string; tagline?: string },
+  ) => Promise<CustomEntity | null>;
+  updateEntity: (
+    id: string,
+    input: { name: string; tagline: string },
+  ) => Promise<boolean>;
+  removeEntity: (id: string) => Promise<void>;
+  hydrated: boolean;
+  session: Session | null;
+  cloudMode: boolean;
+  supabaseReady: boolean;
+  signOut: () => Promise<void>;
+};
+
+const PortfolioEntitiesContext =
+  createContext<PortfolioEntitiesContextValue | null>(null);
+
 export function PortfolioEntitiesProvider({ children }: { children: ReactNode }) {
   const [customEntities, setCustomEntities] = useState<CustomEntity[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
 
-  useEffect(() => {
+  const loadLocalIntoState = useCallback(() => {
+    setCustomEntities(readLocalBusinesses());
+  }, []);
+
+  const persistLocal = useCallback((list: CustomEntity[]) => {
     try {
-      const raw = migrateLegacyStorage();
-      if (raw) {
-        const parsed = JSON.parse(raw) as CustomEntity[];
-        if (Array.isArray(parsed)) setCustomEntities(parsed);
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     } catch {
       /* ignore */
     }
-    setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || !isSupabaseConfigured()) {
+      loadLocalIntoState();
+      setHydrated(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCloud = async (sess: Session) => {
+      if (!localStorage.getItem(MIGRATION_FLAG)) {
+        const local = readLocalBusinesses();
+        if (local.length > 0) {
+          for (const b of local) {
+            await supabase.from("businesses").insert({
+              id: b.id,
+              user_id: sess.user.id,
+              name: b.name,
+              tagline: b.tagline || "",
+            });
+          }
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.setItem(MIGRATION_FLAG, "1");
+        } else {
+          localStorage.setItem(MIGRATION_FLAG, "1");
+        }
+      }
+
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (cancelled) return;
+      if (error) {
+        loadLocalIntoState();
+        return;
+      }
+      setCustomEntities((data as BusinessRow[]).map(mapRow));
+    };
+
+    void supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (cancelled) return;
+      setSession(s);
+      if (s) {
+        void loadCloud(s).finally(() => {
+          if (!cancelled) setHydrated(true);
+        });
+      } else {
+        loadLocalIntoState();
+        setHydrated(true);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, s) => {
+      if (cancelled) return;
+      setSession(s);
+      if (s) {
+        await loadCloud(s);
+      } else {
+        loadLocalIntoState();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [loadLocalIntoState]);
 
   useEffect(() => {
     if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(customEntities));
-    } catch {
-      /* ignore */
-    }
-  }, [customEntities, hydrated]);
+    if (session) return;
+    persistLocal(customEntities);
+  }, [customEntities, hydrated, session, persistLocal]);
 
-  const addEntity = useCallback((input: {
-    name: string;
-    tagline?: string;
-  }): CustomEntity | null => {
-    const name = input.name.trim();
-    if (!name) return null;
-    const tagline = (input.tagline ?? "").trim();
-    const entity: CustomEntity = {
-      id: crypto.randomUUID(),
-      name,
-      tagline,
-      createdAt: Date.now(),
-    };
-    setCustomEntities((prev) => [...prev, entity]);
-    return entity;
-  }, []);
+  const addEntity = useCallback(
+    async (input: { name: string; tagline?: string }): Promise<CustomEntity | null> => {
+      const name = input.name.trim();
+      if (!name) return null;
+      const tagline = (input.tagline ?? "").trim();
+
+      const supabase = createBrowserSupabaseClient();
+      if (supabase && session) {
+        const { data, error } = await supabase
+          .from("businesses")
+          .insert({
+            user_id: session.user.id,
+            name,
+            tagline,
+          })
+          .select()
+          .single();
+
+        if (error || !data) return null;
+        const entity = mapRow(data as BusinessRow);
+        setCustomEntities((prev) => [...prev, entity]);
+        return entity;
+      }
+
+      const entity: CustomEntity = {
+        id: crypto.randomUUID(),
+        name,
+        tagline,
+        createdAt: Date.now(),
+      };
+      setCustomEntities((prev) => {
+        const next = [...prev, entity];
+        persistLocal(next);
+        return next;
+      });
+      return entity;
+    },
+    [session, persistLocal],
+  );
 
   const updateEntity = useCallback(
-    (id: string, input: { name: string; tagline: string }): boolean => {
+    async (id: string, input: { name: string; tagline: string }): Promise<boolean> => {
       const name = input.name.trim();
       if (!name) return false;
       const tagline = input.tagline.trim();
-      setCustomEntities((prev) =>
-        prev.map((e) =>
+
+      const supabase = createBrowserSupabaseClient();
+      if (supabase && session) {
+        const { error } = await supabase
+          .from("businesses")
+          .update({ name, tagline })
+          .eq("id", id)
+          .eq("user_id", session.user.id);
+
+        if (error) return false;
+        setCustomEntities((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, name, tagline } : e)),
+        );
+        return true;
+      }
+
+      setCustomEntities((prev) => {
+        const next = prev.map((e) =>
           e.id === id ? { ...e, name, tagline } : e,
-        ),
-      );
+        );
+        persistLocal(next);
+        return next;
+      });
       return true;
     },
-    [],
+    [session, persistLocal],
   );
 
-  const removeEntity = useCallback((id: string) => {
-    setCustomEntities((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+  const removeEntity = useCallback(
+    async (id: string) => {
+      const supabase = createBrowserSupabaseClient();
+      if (supabase && session) {
+        await supabase
+          .from("businesses")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", session.user.id);
+      }
+      setCustomEntities((prev) => {
+        const next = prev.filter((e) => e.id !== id);
+        if (!session) persistLocal(next);
+        return next;
+      });
+    },
+    [session, persistLocal],
+  );
+
+  const signOut = useCallback(async () => {
+    const supabase = createBrowserSupabaseClient();
+    if (supabase) await supabase.auth.signOut();
+    loadLocalIntoState();
+  }, [loadLocalIntoState]);
+
+  const cloudMode = Boolean(session && isSupabaseConfigured());
 
   const value = useMemo(
     () => ({
@@ -119,8 +290,21 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       updateEntity,
       removeEntity,
       hydrated,
+      session,
+      cloudMode,
+      supabaseReady: isSupabaseConfigured(),
+      signOut,
     }),
-    [customEntities, addEntity, updateEntity, removeEntity, hydrated],
+    [
+      customEntities,
+      addEntity,
+      updateEntity,
+      removeEntity,
+      hydrated,
+      session,
+      cloudMode,
+      signOut,
+    ],
   );
 
   return (

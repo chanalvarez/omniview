@@ -151,7 +151,7 @@ export default function BusinessesPage() {
           if (!open) setDeleting(null);
         }}
         onConfirm={() => {
-          if (deleting) removeEntity(deleting.id);
+          if (deleting) void removeEntity(deleting.id);
         }}
       />
     </div>

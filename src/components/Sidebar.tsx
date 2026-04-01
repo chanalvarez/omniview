@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthNav } from "@/components/AuthNav";
 import {
   Building2,
   Home,
@@ -21,10 +22,10 @@ export function Sidebar() {
 
   return (
     <aside
-      className="relative z-10 flex w-14 shrink-0 flex-col items-center gap-1 border-r border-white/[0.07] bg-[rgba(15,23,42,0.35)] py-5 backdrop-blur-md"
+      className="relative z-10 flex min-h-screen w-14 shrink-0 flex-col items-center border-r border-white/[0.07] bg-[rgba(15,23,42,0.35)] py-5 backdrop-blur-md"
       aria-label="Primary"
     >
-      <div className="mb-6 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/30 to-purple-500/25 text-[10px] font-bold tracking-tight text-white/90 ring-1 ring-white/10">
+      <div className="mb-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/30 to-purple-500/25 text-[10px] font-bold tracking-tight text-white/90 ring-1 ring-white/10">
         OV
       </div>
       <nav className="flex flex-1 flex-col gap-1">
@@ -51,6 +52,7 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <AuthNav />
     </aside>
   );
 }

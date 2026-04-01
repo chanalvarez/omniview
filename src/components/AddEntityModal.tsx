@@ -9,7 +9,7 @@ import { useEffect, useId, useState } from "react";
 type AddEntityModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (input: { name: string; tagline?: string }) => CustomEntity | null;
+  onAdd: (input: { name: string; tagline?: string }) => Promise<CustomEntity | null>;
 };
 
 export function AddEntityModal({
@@ -36,10 +36,10 @@ export function AddEntityModal({
 
   if (!open) return null;
 
-  const submit = () => {
+  const submit = async () => {
     const n = name.trim();
     if (!n) return;
-    const created = onAdd({ name: n });
+    const created = await onAdd({ name: n });
     onOpenChange(false);
     if (created) router.push(`/entities/${created.id}`);
   };
