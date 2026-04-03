@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 type OmniViewLogoProps = {
   size?: "sm" | "md" | "lg";
@@ -9,9 +10,9 @@ type OmniViewLogoProps = {
 };
 
 const sizeMap = {
-  sm: { mark: "h-8 w-8", text: "text-lg" },
-  md: { mark: "h-11 w-11", text: "text-xl" },
-  lg: { mark: "h-14 w-14", text: "text-2xl md:text-3xl" },
+  sm: { px: 36, text: "text-lg" },
+  md: { px: 44, text: "text-xl" },
+  lg: { px: 56, text: "text-2xl md:text-3xl" },
 };
 
 export function OmniViewLogo({
@@ -24,17 +25,17 @@ export function OmniViewLogo({
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <motion.div
-        className={`relative flex ${s.mark} shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[rgba(15,23,42,0.55)] shadow-[0_0_28px_rgba(59,130,246,0.18)] backdrop-blur-xl`}
         initial={{ opacity: 0.9 }}
         animate={{ opacity: 1 }}
+        className="shrink-0"
       >
-        <span
-          className="absolute inset-0 bg-[linear-gradient(135deg,rgba(96,165,250,0.35)_0%,rgba(167,139,250,0.28)_50%,transparent_100%)]"
-          aria-hidden
+        <Image
+          src="/omniview-logo.png"
+          alt="OmniView"
+          width={s.px}
+          height={s.px}
+          priority
         />
-        <span className="relative text-[11px] font-bold tracking-tight text-white/95">
-          OV
-        </span>
       </motion.div>
       {withWordmark ? (
         <span
