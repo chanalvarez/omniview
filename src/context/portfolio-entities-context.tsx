@@ -17,6 +17,8 @@ export type CustomEntity = {
   name: string;
   tagline: string;
   createdAt: number;
+  /** Present when an external API connection exists in Supabase */
+  integrationConnected?: boolean;
 };
 
 type BusinessRow = {
@@ -25,11 +27,20 @@ type BusinessRow = {
   name: string;
   tagline: string;
   created_at: string;
+  external_connections: { id: string } | { id: string }[] | null;
 };
 
 const STORAGE_KEY = "omniview.businesses.v1";
 const LEGACY_STORAGE_KEY = "omniview.entities.v1";
 const MIGRATION_FLAG = "omniview.cloud_migrated_v1";
+
+function hasExternalConnection(
+  ec: BusinessRow["external_connections"],
+): boolean {
+  if (ec == null) return false;
+  if (Array.isArray(ec)) return ec.length > 0;
+  return typeof ec === "object" && "id" in ec;
+}
 
 function mapRow(r: BusinessRow): CustomEntity {
   return {
@@ -37,6 +48,7 @@ function mapRow(r: BusinessRow): CustomEntity {
     name: r.name,
     tagline: r.tagline ?? "",
     createdAt: new Date(r.created_at).getTime(),
+    integrationConnected: hasExternalConnection(r.external_connections),
   };
 }
 
@@ -67,11 +79,20 @@ function readLocalBusinesses(): CustomEntity[] {
   }
 }
 
+type ConnectBusinessResult =
+  | { ok: true; entity: CustomEntity }
+  | { ok: false; error: string };
+
 type PortfolioEntitiesContextValue = {
   customEntities: CustomEntity[];
   addEntity: (
     input: { name: string; tagline?: string },
   ) => Promise<CustomEntity | null>;
+  connectBusiness: (input: {
+    name: string;
+    baseUrl: string;
+    apiKey: string;
+  }) => Promise<ConnectBusinessResult>;
   updateEntity: (
     id: string,
     input: { name: string; tagline: string },
@@ -135,7 +156,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
       const { data, error } = await supabase
         .from("businesses")
-        .select("*")
+        .select("id, user_id, name, tagline, created_at, external_connections ( id )")
         .order("created_at", { ascending: true });
 
       if (cancelled) return;
@@ -143,7 +164,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
         loadLocalIntoState();
         return;
       }
-      setCustomEntities((data as BusinessRow[]).map(mapRow));
+      setCustomEntities((data as unknown as BusinessRow[]).map(mapRow));
     };
 
     void supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -183,6 +204,84 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
     persistLocal(customEntities);
   }, [customEntities, hydrated, session, persistLocal]);
 
+  const connectBusiness = useCallback(
+    async (input: {
+      name: string;
+      baseUrl: string;
+      apiKey: string;
+    }): Promise<ConnectBusinessResult> => {
+      const name = input.name.trim();
+      const baseUrl = input.baseUrl.trim();
+      const apiKey = input.apiKey.trim();
+      if (!name || !baseUrl || !apiKey) {
+        return { ok: false, error: "Please fill in all fields." };
+      }
+
+      if (!session) {
+        return { ok: false, error: "Sign in to connect and store credentials securely." };
+      }
+
+      try {
+        const res = await fetch("/api/businesses/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            name,
+            base_url: baseUrl,
+            api_key: apiKey,
+          }),
+        });
+
+        const json = (await res.json()) as {
+          error?: string;
+          message?: string;
+          business?: {
+            id: string;
+            name: string;
+            tagline: string;
+            created_at: string;
+            integration_connected?: boolean;
+          };
+        };
+
+        if (!res.ok) {
+          const err =
+            json.message ??
+            (json.error === "verification_failed"
+              ? "Could not verify API endpoint."
+              : json.error) ??
+            "Connection failed.";
+          return { ok: false, error: err };
+        }
+
+        const b = json.business;
+        if (!b) {
+          return { ok: false, error: "Invalid server response." };
+        }
+
+        const entity: CustomEntity = {
+          id: b.id,
+          name: b.name,
+          tagline: b.tagline ?? "",
+          createdAt: new Date(b.created_at).getTime(),
+          integrationConnected: true,
+        };
+
+        setCustomEntities((prev) => [...prev, entity]);
+
+        void fetch(`/api/businesses/${entity.id}/metrics`, {
+          credentials: "include",
+        });
+
+        return { ok: true, entity };
+      } catch {
+        return { ok: false, error: "Network error." };
+      }
+    },
+    [session],
+  );
+
   const addEntity = useCallback(
     async (input: { name: string; tagline?: string }): Promise<CustomEntity | null> => {
       const name = input.name.trim();
@@ -202,7 +301,10 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
           .single();
 
         if (error || !data) return null;
-        const entity = mapRow(data as BusinessRow);
+        const entity = mapRow({
+          ...(data as unknown as BusinessRow),
+          external_connections: null,
+        });
         setCustomEntities((prev) => [...prev, entity]);
         return entity;
       }
@@ -212,6 +314,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
         name,
         tagline,
         createdAt: Date.now(),
+        integrationConnected: false,
       };
       setCustomEntities((prev) => {
         const next = [...prev, entity];
@@ -287,6 +390,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
     () => ({
       customEntities,
       addEntity,
+      connectBusiness,
       updateEntity,
       removeEntity,
       hydrated,
@@ -298,6 +402,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
     [
       customEntities,
       addEntity,
+      connectBusiness,
       updateEntity,
       removeEntity,
       hydrated,

@@ -37,7 +37,7 @@ export async function GET(
   }
 
   const { data: integration, error: intError } = await supabase
-    .from("business_integrations")
+    .from("external_connections")
     .select("base_url, api_key, metrics_path")
     .eq("business_id", businessId)
     .maybeSingle();

@@ -11,13 +11,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 export default function BusinessesPage() {
-  const {
-    addEntity,
-    customEntities,
-    hydrated,
-    removeEntity,
-    updateEntity,
-  } = usePortfolioEntities();
+  const { customEntities, hydrated, removeEntity, updateEntity } =
+    usePortfolioEntities();
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<CustomEntity | null>(null);
   const [deleting, setDeleting] = useState<CustomEntity | null>(null);
@@ -32,7 +27,7 @@ export default function BusinessesPage() {
           <div>
             <h1 className="text-xl font-semibold text-white">Businesses</h1>
             <p className="text-sm text-white/50">
-              Companies you monitor in OmniView. Add a name to connect each one.
+              Secure connections: name, API URL, and key — verified before save.
             </p>
           </div>
         </div>
@@ -42,7 +37,7 @@ export default function BusinessesPage() {
           className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/[0.12]"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
-          New business
+          Connect business
         </button>
       </header>
 
@@ -59,9 +54,9 @@ export default function BusinessesPage() {
         {customEntities.length === 0 && hydrated ? (
           <GlassCard className="p-8 text-center" delay={0}>
             <p className="text-white/55">
-              No businesses yet. Use <strong className="font-medium text-white/80">New business</strong>{" "}
+              No businesses yet. Use <strong className="font-medium text-white/80">Connect business</strong>{" "}
               or the <strong className="font-medium text-white/80">Add a business</strong> card on Home.
-              Just enter a name, OmniView connects it for you.
+              We ping your API before storing credentials.
             </p>
             <button
               type="button"
@@ -88,9 +83,15 @@ export default function BusinessesPage() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-white">{e.name}</p>
-                          <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300/95">
-                            Connected
-                          </span>
+                                  {e.integrationConnected ? (
+                            <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300/95">
+                              Connected
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-200/90">
+                              Pending
+                            </span>
+                          )}
                         </div>
                         {e.tagline ? (
                           <p className="mt-0.5 truncate text-sm text-white/50">
@@ -135,7 +136,7 @@ export default function BusinessesPage() {
         )}
       </section>
 
-      <AddEntityModal open={addOpen} onOpenChange={setAddOpen} onAdd={addEntity} />
+      <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />
       <EditEntityModal
         entity={editing}
         open={editing !== null}

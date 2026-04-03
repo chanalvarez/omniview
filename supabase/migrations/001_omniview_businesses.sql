@@ -9,6 +9,26 @@ create table if not exists public.businesses (
   created_at timestamptz not null default now()
 );
 
+-- If `businesses` already existed from an older/partial run without `user_id`,
+-- `CREATE TABLE IF NOT EXISTS` does nothing and the index below would fail.
+alter table public.businesses
+  add column if not exists user_id uuid references auth.users (id) on delete cascade;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'businesses'
+      and column_name = 'user_id'
+      and is_nullable = 'yes'
+  )
+  and not exists (select 1 from public.businesses where user_id is null) then
+    alter table public.businesses alter column user_id set not null;
+  end if;
+end $$;
+
 create table if not exists public.business_integrations (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references public.businesses on delete cascade,

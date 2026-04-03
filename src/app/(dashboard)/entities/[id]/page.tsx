@@ -86,7 +86,7 @@ export default function BusinessDetailPage() {
       return;
     }
     const { data } = await supabase
-      .from("business_integrations")
+      .from("external_connections")
       .select("id")
       .eq("business_id", id)
       .maybeSingle();

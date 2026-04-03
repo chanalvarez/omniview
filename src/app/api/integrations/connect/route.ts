@@ -54,14 +54,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error: upsertError } = await supabase.from("business_integrations").upsert(
+  const now = new Date().toISOString();
+  const { error: upsertError } = await supabase.from("external_connections").upsert(
     {
       business_id: businessId,
       provider,
       base_url: baseUrl.replace(/\/+$/, ""),
       api_key: apiKey,
       metrics_path: metricsPath,
-      updated_at: new Date().toISOString(),
+      verified_at: now,
+      updated_at: now,
     },
     { onConflict: "business_id" },
   );
