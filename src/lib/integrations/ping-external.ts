@@ -17,9 +17,12 @@ export async function pingExternalMetrics(
   const url = `${base}/rest/v1/?apikey=${encodeURIComponent(apiKey)}`;
 
   try {
+    // Send key as URL param only (no Authorization header) — mirrors the browser
+    // test that works. Sending Authorization: Bearer can cause 401 on projects
+    // where the gateway validates headers differently from URL params.
     const res = await fetch(url, {
       method: "GET",
-      headers: supabaseRestHeaders(apiKey),
+      headers: { apikey: apiKey, Accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(20_000),
     });

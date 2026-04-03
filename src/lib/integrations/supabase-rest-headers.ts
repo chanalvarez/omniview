@@ -12,9 +12,12 @@
  * @see https://supabase.com/docs/guides/api
  */
 export function supabaseRestHeaders(apiKey: string): HeadersInit {
+  // Send key as `apikey` header only (no Authorization: Bearer).
+  // The key is also passed as ?apikey= URL param in every request, giving
+  // PostgREST two ways to find it without the Bearer validation step that
+  // some Supabase projects reject with 401.
   return {
     apikey: apiKey,
-    Authorization: `Bearer ${apiKey}`,
     Accept: "application/json",
   };
 }
