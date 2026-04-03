@@ -78,11 +78,22 @@ export async function POST(request: Request) {
 
   const now = new Date().toISOString();
 
-  const { data: business, error: bizError } = await supabase
+  // Try inserting with tagline first; if the column doesn't exist yet, retry without it.
+  let bizInsert = await supabase
     .from("businesses")
     .insert({ user_id: user.id, name, tagline: "" })
-    .select("id, name, tagline, created_at")
+    .select("id, name, created_at")
     .single();
+
+  if (bizInsert.error?.message?.includes("tagline")) {
+    bizInsert = await supabase
+      .from("businesses")
+      .insert({ user_id: user.id, name })
+      .select("id, name, created_at")
+      .single();
+  }
+
+  const { data: business, error: bizError } = bizInsert;
 
   if (bizError || !business) {
     return NextResponse.json(
@@ -91,8 +102,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const biz = business as { id: string; name: string; created_at: string };
+
   const { error: connError } = await supabase.from("external_connections").insert({
-    business_id: business.id,
+    business_id: biz.id,
     provider: "servewise",
     base_url: baseUrl,
     api_key: apiKey,
@@ -102,19 +115,16 @@ export async function POST(request: Request) {
   });
 
   if (connError) {
-    await supabase.from("businesses").delete().eq("id", business.id);
+    await supabase.from("businesses").delete().eq("id", biz.id);
     return NextResponse.json({ error: connError.message }, { status: 500 });
   }
 
   return NextResponse.json({
     business: {
-      id: business.id,
-      name: (business as { id: string; name: string; tagline: string; created_at: string }).name,
-      tagline:
-        (business as { id: string; name: string; tagline: string; created_at: string }).tagline ??
-        "",
-      created_at: (business as { id: string; name: string; tagline: string; created_at: string })
-        .created_at,
+      id: biz.id,
+      name: biz.name,
+      tagline: "",
+      created_at: biz.created_at,
       integration_connected: true,
     },
   });
