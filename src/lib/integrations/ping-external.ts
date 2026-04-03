@@ -10,7 +10,11 @@ export async function pingExternalMetrics(
   apiKey: string,
 ): Promise<{ ok: true } | { ok: false; status?: number; reason: "http" | "network" }> {
   const base = baseUrl.replace(/\/+$/, "");
-  const url = `${base}/rest/v1/`;
+
+  // Pass apikey both as a header AND as a URL param — PostgREST accepts either.
+  // The URL param is more reliable for new-format (sb_publishable_*) keys where
+  // Supabase's gateway may not recognise the Bearer token in the Authorization header.
+  const url = `${base}/rest/v1/?apikey=${encodeURIComponent(apiKey)}`;
 
   try {
     const res = await fetch(url, {

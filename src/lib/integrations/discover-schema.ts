@@ -26,7 +26,7 @@ export async function discoverSchema(
 ): Promise<SchemaDiscoveryResult> {
   const base = baseUrl.replace(/\/+$/, "");
   try {
-    const res = await fetch(`${base}/rest/v1/`, {
+    const res = await fetch(`${base}/rest/v1/?apikey=${encodeURIComponent(apiKey)}`, {
       method: "GET",
       headers: supabaseRestHeaders(apiKey),
       cache: "no-store",

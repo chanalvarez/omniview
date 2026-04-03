@@ -27,7 +27,7 @@ export async function fetchTableData(
     columns.find((c) => ["status", "state", "type", "stage"].includes(c.name))?.name ?? null;
 
   const order = dateCol ? `&order=${dateCol}.desc` : "";
-  const url = `${base}/rest/v1/${tableName}?limit=${limit}${order}`;
+  const url = `${base}/rest/v1/${tableName}?apikey=${encodeURIComponent(apiKey)}&limit=${limit}${order}`;
 
   try {
     const res = await fetch(url, {

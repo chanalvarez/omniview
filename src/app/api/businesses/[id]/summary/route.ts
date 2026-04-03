@@ -27,7 +27,8 @@ async function countTable(
   table: string,
   filter?: string,
 ): Promise<number> {
-  const qs = filter ? `?${filter}&limit=1` : "?limit=1";
+  const keyParam = `apikey=${encodeURIComponent(apiKey)}`;
+  const qs = filter ? `?${keyParam}&${filter}&limit=1` : `?${keyParam}&limit=1`;
   try {
     const res = await fetch(`${baseUrl}/rest/v1/${table}${qs}`, {
       headers: { ...supabaseRestHeaders(apiKey), Prefer: "count=exact" },
