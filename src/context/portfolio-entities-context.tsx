@@ -88,7 +88,7 @@ type PortfolioEntitiesContextValue = {
   addEntity: (
     input: { name: string; tagline?: string },
   ) => Promise<CustomEntity | null>;
-  connectBusiness: (input: { name: string; apiKey: string }) => Promise<ConnectBusinessResult>;
+  connectBusiness: (input: { name: string; apiKey: string; baseUrl?: string }) => Promise<ConnectBusinessResult>;
   updateEntity: (
     id: string,
     input: { name: string; tagline: string },
@@ -202,9 +202,10 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
   }, [customEntities, hydrated, session, persistLocal]);
 
   const connectBusiness = useCallback(
-    async (input: { name: string; apiKey: string }): Promise<ConnectBusinessResult> => {
+    async (input: { name: string; apiKey: string; baseUrl?: string }): Promise<ConnectBusinessResult> => {
       const name = input.name.trim();
       const apiKey = input.apiKey.trim();
+      const baseUrl = input.baseUrl?.trim() ?? "";
       if (!name || !apiKey) {
         return { ok: false, error: "Please fill in all fields." };
       }
@@ -221,6 +222,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
           body: JSON.stringify({
             name,
             api_key: apiKey,
+            ...(baseUrl ? { base_url: baseUrl } : {}),
           }),
         });
 

@@ -21,6 +21,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
   const { connectBusiness } = usePortfolioEntities();
 
   const [name, setName] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [shake, setShake] = useState(false);
@@ -40,6 +41,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
   useEffect(() => {
     if (!open) return;
     setName("");
+    setBaseUrl("");
     setApiKey("");
     setPhase("idle");
     setShake(false);
@@ -53,6 +55,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
 
   const canSubmit =
     name.trim() &&
+    baseUrl.trim() &&
     apiKey.trim() &&
     phase !== "verifying" &&
     phase !== "success";
@@ -63,6 +66,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
     setPhase("verifying");
     const result = await connectBusiness({
       name: name.trim(),
+      baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
     });
 
@@ -130,8 +134,9 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
             </button>
           </div>
           <p className="mt-1 text-sm text-white/50">
-            Enter a display name and your ServeWise integration API key. The API host is configured
-            on the server (<code className="text-white/65">INTEGRATION_API_BASE_URL</code>).
+            Enter your business name, the ServeWise Supabase project URL, and the{" "}
+            <span className="text-white/70">anon public</span> key from Supabase → Project
+            Settings → API.
           </p>
         </div>
 
@@ -211,10 +216,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                     value={name}
                     onChange={(e) => {
                       setName(e.target.value);
-                      if (phase === "error") {
-                        setPhase("idle");
-                        setErrorDetail(null);
-                      }
+                      if (phase === "error") { setPhase("idle"); setErrorDetail(null); }
                     }}
                     placeholder="e.g. ServeWise"
                     className={`w-full rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
@@ -224,10 +226,30 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                 </div>
                 <div>
                   <label
+                    htmlFor="biz-url"
+                    className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
+                  >
+                    Supabase project URL
+                  </label>
+                  <input
+                    id="biz-url"
+                    value={baseUrl}
+                    onChange={(e) => {
+                      setBaseUrl(e.target.value);
+                      if (phase === "error") { setPhase("idle"); setErrorDetail(null); }
+                    }}
+                    placeholder="https://xxxx.supabase.co"
+                    className={`w-full rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 font-mono ${inputError}`}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </div>
+                <div>
+                  <label
                     htmlFor="biz-key"
                     className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
                   >
-                    Integration API key
+                    Anon public key
                   </label>
                   <input
                     id="biz-key"
@@ -235,10 +257,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                     value={apiKey}
                     onChange={(e) => {
                       setApiKey(e.target.value);
-                      if (phase === "error") {
-                        setPhase("idle");
-                        setErrorDetail(null);
-                      }
+                      if (phase === "error") { setPhase("idle"); setErrorDetail(null); }
                     }}
                     placeholder="••••••••••••"
                     className={`w-full rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}

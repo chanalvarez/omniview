@@ -1,14 +1,18 @@
 "use client";
 
 import { GlassCard } from "@/components/GlassCard";
+import { DataExplorer } from "@/components/dashboard/DataExplorer";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { formatPhpCompact, formatPhpThousandsK } from "@/lib/format/php";
+import { formatPhpCompact } from "@/lib/format/php";
 import { usePortfolioEntities } from "@/context/portfolio-entities-context";
+import type { ExploreResponse, ExploreTable } from "@/app/api/businesses/[id]/explore/route";
 import {
   Activity,
   ArrowLeft,
+  Database,
   Link2,
   Loader2,
+  RefreshCw,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
@@ -24,6 +28,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { sumColumn } from "@/lib/integrations/fetch-table-data";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function hashId(id: string): number {
   let h = 0;
@@ -34,7 +41,7 @@ function hashId(id: string): number {
   return Math.abs(h);
 }
 
-function buildTrend(seed: number) {
+function buildMockTrend(seed: number) {
   const base = 40 + (seed % 35);
   return Array.from({ length: 9 }, (_, i) => ({
     m: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"][i],
@@ -42,18 +49,61 @@ function buildTrend(seed: number) {
   }));
 }
 
-type MetricsApi = {
-  connected: boolean;
-  source: "live" | "error" | "none";
-  error?: string;
-  metrics?: {
-    revenuePhp: number;
-    healthScore: number;
-    momentumPct: number;
-    attentionItems: number;
-    trend: { m: string; v: number }[];
+/** Pick the "best" table for overview stats (most rows, or revenue-shaped). */
+function pickPrimaryTable(tables: ExploreTable[]): ExploreTable | null {
+  if (tables.length === 0) return null;
+  const revenue = tables.find((t) => t.numericColumns.length > 0 && t.totalCount > 0);
+  return revenue ?? tables[0];
+}
+
+/** Derive summary KPIs from explore data. */
+function deriveKpis(tables: ExploreTable[], seed: number) {
+  const primary = pickPrimaryTable(tables);
+
+  const totalRecords = tables.reduce((s, t) => s + t.totalCount, 0);
+
+  let revenueSum = 0;
+  let revenueLabel = "Revenue (sample)";
+  if (primary?.numericColumns[0]) {
+    revenueSum = sumColumn(primary.rows, primary.numericColumns[0]);
+    revenueLabel = primary.numericColumns[0].replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  const mockPulse = 78 + (seed % 18);
+  const mockMomentum = 6 + (seed % 9);
+
+  // Build trend from primary table's date column if available
+  let trend: { m: string; v: number }[] = buildMockTrend(seed);
+  if (primary?.dateColumn && primary.rows.length > 1) {
+    const byMonth: Record<string, number> = {};
+    for (const row of primary.rows) {
+      const val: unknown = row[primary.dateColumn];
+      if (typeof val !== "string") continue;
+      const ym = val.slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(ym)) continue;
+      byMonth[ym] = (byMonth[ym] ?? 0) + 1;
+    }
+    const entries = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b));
+    if (entries.length >= 2) {
+      trend = entries.map(([ym, count]) => ({
+        m: new Date(`${ym}-01`).toLocaleString("default", { month: "short", year: "2-digit" }),
+        v: count,
+      }));
+    }
+  }
+
+  return {
+    totalRecords,
+    revenueSum,
+    revenueLabel,
+    pulse: mockPulse,
+    momentum: mockMomentum,
+    trend,
+    isLive: tables.length > 0,
   };
-};
+}
+
+// ── Page component ────────────────────────────────────────────────────────────
 
 export default function BusinessDetailPage() {
   const params = useParams();
@@ -62,29 +112,26 @@ export default function BusinessDetailPage() {
   const business = customEntities.find((e) => e.id === id);
 
   const seed = business ? hashId(business.id) : 0;
-  const mockTrend = buildTrend(seed);
-  const mockPulse = 78 + (seed % 18);
-  const mockRevK = 420 + (seed % 180);
 
+  // Integration flag
   const [hasIntegration, setHasIntegration] = useState<boolean | null>(null);
-  const [metrics, setMetrics] = useState<MetricsApi | null>(null);
-  const [metricsLoading, setMetricsLoading] = useState(false);
+
+  // Connect form state (for detail-page re-connect / update)
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [metricsPath, setMetricsPath] = useState("/v1/metrics");
   const [connectSaving, setConnectSaving] = useState(false);
   const [connectMsg, setConnectMsg] = useState<string | null>(null);
 
+  // Explore data (multi-table)
+  const [exploreData, setExploreData] = useState<ExploreTable[]>([]);
+  const [exploreCount, setExploreCount] = useState(0);
+  const [exploreLoading, setExploreLoading] = useState(false);
+  const [exploreError, setExploreError] = useState<string | null>(null);
+
   const loadIntegrationFlag = useCallback(async () => {
-    if (!cloudMode || !id) {
-      setHasIntegration(false);
-      return;
-    }
+    if (!cloudMode || !id) { setHasIntegration(false); return; }
     const supabase = createBrowserSupabaseClient();
-    if (!supabase) {
-      setHasIntegration(false);
-      return;
-    }
+    if (!supabase) { setHasIntegration(false); return; }
     const { data } = await supabase
       .from("external_connections")
       .select("id")
@@ -93,33 +140,28 @@ export default function BusinessDetailPage() {
     setHasIntegration(!!data);
   }, [cloudMode, id]);
 
-  const loadMetrics = useCallback(async () => {
+  const loadExplore = useCallback(async () => {
     if (!cloudMode || !id) return;
-    setMetricsLoading(true);
+    setExploreLoading(true);
+    setExploreError(null);
     try {
-      const res = await fetch(`/api/businesses/${id}/metrics`, {
-        credentials: "include",
-      });
-      const json = (await res.json()) as MetricsApi;
-      setMetrics(json);
+      const res = await fetch(`/api/businesses/${id}/explore`, { credentials: "include" });
+      const json = (await res.json()) as ExploreResponse;
+      if (json.ok) {
+        setExploreData(json.tables);
+        setExploreCount(json.discoveredCount);
+      } else {
+        setExploreError(json.error ?? "Could not load data.");
+      }
     } catch {
-      setMetrics({
-        connected: false,
-        source: "none",
-        error: "Could not load metrics.",
-      });
+      setExploreError("Network error while loading business data.");
     } finally {
-      setMetricsLoading(false);
+      setExploreLoading(false);
     }
   }, [cloudMode, id]);
 
-  useEffect(() => {
-    void loadIntegrationFlag();
-  }, [loadIntegrationFlag]);
-
-  useEffect(() => {
-    if (hasIntegration === true) void loadMetrics();
-  }, [hasIntegration, loadMetrics]);
+  useEffect(() => { void loadIntegrationFlag(); }, [loadIntegrationFlag]);
+  useEffect(() => { if (hasIntegration === true) void loadExplore(); }, [hasIntegration, loadExplore]);
 
   const submitConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,26 +176,25 @@ export default function BusinessDetailPage() {
           business_id: id,
           base_url: baseUrl.trim(),
           api_key: apiKey.trim(),
-          metrics_path: metricsPath.trim() || "/v1/metrics",
+          metrics_path: "/rest/v1/",
           provider: "servewise",
         }),
       });
       const json = (await res.json()) as { error?: string; ok?: boolean };
-      if (!res.ok) {
-        setConnectMsg(json.error ?? "Connection failed.");
-        return;
-      }
+      if (!res.ok) { setConnectMsg(json.error ?? "Connection failed."); return; }
       setApiKey("");
-      setConnectMsg("Saved. Syncing metrics…");
+      setConnectMsg("Saved. Loading data…");
       setHasIntegration(true);
-      await loadMetrics();
-      setConnectMsg("Connected. Metrics update below.");
+      await loadExplore();
+      setConnectMsg("Connected. Data loaded below.");
     } catch {
       setConnectMsg("Network error.");
     } finally {
       setConnectSaving(false);
     }
   };
+
+  // ── Loading / not found ──────────────────────────────────────────────────
 
   if (!hydrated) {
     return (
@@ -166,21 +207,13 @@ export default function BusinessDetailPage() {
   if (!business) {
     return (
       <div className="px-5 py-8 md:px-8 md:py-10 lg:px-12">
-        <Link
-          href="/entities"
-          className="inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-white"
-        >
+        <Link href="/entities" className="inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-white">
           <ArrowLeft className="h-4 w-4" strokeWidth={2} />
           Back to Businesses
         </Link>
         <GlassCard className="mt-8 p-8" delay={0}>
-          <p className="text-white/70">
-            This business was not found. It may have been removed from this device.
-          </p>
-          <Link
-            href="/entities"
-            className="mt-4 inline-block text-sm font-medium text-blue-300/90 transition hover:text-white"
-          >
+          <p className="text-white/70">This business was not found.</p>
+          <Link href="/entities" className="mt-4 inline-block text-sm font-medium text-blue-300/90 transition hover:text-white">
             Go to Businesses
           </Link>
         </GlassCard>
@@ -188,60 +221,52 @@ export default function BusinessDetailPage() {
     );
   }
 
-  const m = metrics?.metrics;
-  const fromApi = Boolean(metrics?.connected && m);
-  const errLine = metrics?.error;
-
-  const pulse = m?.healthScore ?? mockPulse;
-  const revDisplay = m
-    ? formatPhpCompact(m.revenuePhp)
-    : formatPhpCompact(mockRevK * 1000);
-  const momentum = m?.momentumPct ?? 6 + (seed % 9);
-  const attention = m?.attentionItems ?? 2 + (seed % 4);
-  const trendData = m?.trend ?? mockTrend;
+  const kpis = deriveKpis(exploreData, seed);
 
   return (
     <div className="px-5 py-8 md:px-8 md:py-10 lg:px-12">
-      <Link
-        href="/entities"
-        className="inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-white"
-      >
+      {/* Back */}
+      <Link href="/entities" className="inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-white">
         <ArrowLeft className="h-4 w-4" strokeWidth={2} />
         Back to Businesses
       </Link>
 
+      {/* Header */}
       <header className="mt-6 max-w-4xl">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-white/45">
-            Your business
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wider text-white/45">Your business</p>
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300/95">
             <Sparkles className="h-3 w-3" aria-hidden />
             {cloudMode ? "Cloud" : "Local"}
           </span>
+          {hasIntegration && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-300/90">
+              <Database className="h-3 w-3" aria-hidden />
+              ServeWise connected
+            </span>
+          )}
         </div>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
-          {business.name}
-        </h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">{business.name}</h1>
         {business.tagline ? (
           <p className="mt-2 text-lg text-white/55">{business.tagline}</p>
         ) : (
           <p className="mt-2 text-base text-white/45">
             {cloudMode
-              ? "Connect ServeWise below to pull live KPIs."
-              : "Sign in for cloud sync, then connect your ServeWise integration API keys."}
+              ? hasIntegration
+                ? "Live data from ServeWise below."
+                : "Connect ServeWise below to see your live business data."
+              : "Sign in for cloud sync, then connect ServeWise."}
           </p>
         )}
       </header>
 
+      {/* Connect card */}
       {!cloudMode ? (
         <GlassCard className="mt-6 p-5" delay={0.05}>
           <p className="text-sm text-white/60">
-            This business is stored on this device only.{" "}
-            <Link href="/login" className="font-medium text-blue-300/90 hover:text-white">
-              Sign in
-            </Link>{" "}
-            to sync to the cloud and connect ServeWise with your API credentials.
+            Stored on this device only.{" "}
+            <Link href="/login" className="font-medium text-blue-300/90 hover:text-white">Sign in</Link>{" "}
+            to sync and connect ServeWise.
           </p>
         </GlassCard>
       ) : (
@@ -252,46 +277,36 @@ export default function BusinessDetailPage() {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-semibold text-white">
-                Connect ServeWise
+                {hasIntegration ? "Update ServeWise connection" : "Connect ServeWise"}
               </h2>
               <p className="mt-1 text-sm text-white/50">
-                OmniView calls your ServeWise HTTPS API using a bearer token. Set the
-                base URL (e.g. <code className="text-white/70">https://api.your-servewise.com</code>
-                ), metrics path (your API&apos;s summary endpoint), and integration API key. Adjust{" "}
-                <code className="text-white/70">normalize-metrics.ts</code> if field names differ.
+                Enter your <strong className="text-white/70">Supabase project URL</strong> (e.g.{" "}
+                <code className="text-white/65">https://xxxx.supabase.co</code>) and the{" "}
+                <strong className="text-white/70">anon public</strong> key from Supabase → Project
+                Settings → API.
               </p>
-              {hasIntegration ? (
-                <p className="mt-2 text-xs font-medium text-emerald-300/90">
-                  Integration saved. {metricsLoading ? "Loading metrics…" : null}
+              {hasIntegration && (
+                <p className="mt-1 text-xs font-medium text-emerald-300/80">
+                  Integration active. Fill below to update credentials.
                 </p>
-              ) : null}
+              )}
               <form onSubmit={submitConnect} className="mt-4 space-y-3">
                 <div>
                   <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
-                    Base URL
+                    Supabase project URL
                   </label>
                   <input
                     value={baseUrl}
                     onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder="https://api.servewise.example"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none ring-blue-400/30 focus:ring-2"
+                    placeholder="https://xxxx.supabase.co"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-blue-400/30 focus:ring-2"
+                    spellCheck={false}
                     autoComplete="off"
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
-                    Metrics path
-                  </label>
-                  <input
-                    value={metricsPath}
-                    onChange={(e) => setMetricsPath(e.target.value)}
-                    placeholder="/v1/metrics"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-blue-400/30 focus:ring-2"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
-                    Integration API key / bearer token
+                    Anon public key
                   </label>
                   <input
                     type="password"
@@ -302,18 +317,14 @@ export default function BusinessDetailPage() {
                     autoComplete="off"
                   />
                 </div>
-                {connectMsg ? (
-                  <p className="text-sm text-white/55">{connectMsg}</p>
-                ) : null}
+                {connectMsg && <p className="text-sm text-white/55">{connectMsg}</p>}
                 <button
                   type="submit"
                   disabled={connectSaving || !baseUrl.trim() || !apiKey.trim()}
                   className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-medium text-white transition hover:bg-white/[0.12] disabled:opacity-40"
                 >
-                  {connectSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : null}
-                  Save &amp; sync
+                  {connectSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Save &amp; connect
                 </button>
               </form>
             </div>
@@ -321,128 +332,171 @@ export default function BusinessDetailPage() {
         </GlassCard>
       )}
 
-      {errLine && cloudMode ? (
-        <p className="mt-4 text-sm text-amber-200/90">
-          API note: {errLine}
-        </p>
-      ) : null}
+      {/* Explore error */}
+      {exploreError && cloudMode && (
+        <p className="mt-4 text-sm text-amber-200/90">Data note: {exploreError}</p>
+      )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <GlassCard className="p-5" delay={0.06}>
-          <p className="text-xs font-medium uppercase tracking-wider text-white/45">
-            Health pulse
-          </p>
-          <p className="mt-2 flex items-baseline gap-1 text-3xl font-semibold tabular-nums text-white">
-            {pulse}
-            <span className="text-lg text-white/40">/100</span>
-          </p>
-          <p className="mt-1 text-sm text-white/45">
-            {fromApi && metrics?.source === "live"
-              ? "Live · ServeWise"
-              : fromApi
-                ? "From API (check warning below)"
-                : "Preview"}
-          </p>
-        </GlassCard>
-        <GlassCard className="p-5" delay={0.07}>
-          <p className="text-xs font-medium uppercase tracking-wider text-white/45">
-            Revenue signal
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
-            {revDisplay}
-          </p>
-          <p className="mt-1 text-sm text-white/45">PHP (normalized)</p>
-        </GlassCard>
-        <GlassCard className="p-5" delay={0.08}>
-          <p className="text-xs font-medium uppercase tracking-wider text-white/45">
-            Attention items
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-amber-200/95">
-            {attention}
-          </p>
-        </GlassCard>
-        <GlassCard className="p-5" delay={0.09}>
-          <p className="text-xs font-medium uppercase tracking-wider text-white/45">
-            Momentum
-          </p>
-          <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums text-white">
-            <TrendingUp className="h-6 w-6 text-emerald-400/90" strokeWidth={2} />+
-            {momentum}%
-          </p>
-        </GlassCard>
-      </div>
-
-      <div className="mt-6">
-        <GlassCard className="p-5" delay={0.1}>
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05]">
-              <Activity className="h-5 w-5 text-blue-300/85" strokeWidth={1.75} />
-            </div>
-            <div className="min-w-0 flex-1">
+      {/* ── Overview KPIs (derived from real data when available) ── */}
+      {cloudMode && hasIntegration && (
+        <>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {/* Total records */}
+            <GlassCard className="p-5" delay={0.06}>
               <p className="text-xs font-medium uppercase tracking-wider text-white/45">
-                Performance
+                Total records
               </p>
-              <h2 className="mt-1 text-lg font-semibold text-white">Activity index</h2>
-              <div className="mt-4 h-[260px]">
-                {metricsLoading ? (
+              <p className="mt-2 text-3xl font-semibold tabular-nums text-white">
+                {exploreLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-white/40" />
+                ) : (
+                  kpis.totalRecords.toLocaleString()
+                )}
+              </p>
+              <p className="mt-1 text-sm text-white/45">
+                {kpis.isLive ? `Across ${exploreData.length} table${exploreData.length !== 1 ? "s" : ""}` : "Preview"}
+              </p>
+            </GlassCard>
+
+            {/* Revenue / numeric sum */}
+            <GlassCard className="p-5" delay={0.07}>
+              <p className="text-xs font-medium uppercase tracking-wider text-white/45">
+                {kpis.isLive && kpis.revenueSum > 0 ? kpis.revenueLabel : "Revenue signal"}
+              </p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
+                {exploreLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-white/40" />
+                ) : kpis.isLive && kpis.revenueSum > 0 ? (
+                  formatPhpCompact(kpis.revenueSum)
+                ) : (
+                  formatPhpCompact((420 + (seed % 180)) * 1000)
+                )}
+              </p>
+              <p className="mt-1 text-sm text-white/45">
+                {kpis.isLive && kpis.revenueSum > 0 ? "Shown records" : "Preview"}
+              </p>
+            </GlassCard>
+
+            {/* Tables accessed */}
+            <GlassCard className="p-5" delay={0.08}>
+              <p className="text-xs font-medium uppercase tracking-wider text-white/45">
+                Data sources
+              </p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
+                {exploreLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-white/40" />
+                ) : (
+                  exploreData.length
+                )}
+              </p>
+              <p className="mt-1 text-sm text-white/45">
+                {exploreCount > 0 ? `${exploreCount} in schema` : "Tables / views"}
+              </p>
+            </GlassCard>
+
+            {/* Momentum */}
+            <GlassCard className="p-5" delay={0.09}>
+              <p className="text-xs font-medium uppercase tracking-wider text-white/45">Momentum</p>
+              <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums text-white">
+                <TrendingUp className="h-6 w-6 text-emerald-400/90" strokeWidth={2} />
+                +{kpis.momentum}%
+              </p>
+              <p className="mt-1 text-sm text-white/45">Estimated</p>
+            </GlassCard>
+          </div>
+
+          {/* Activity trend chart */}
+          <div className="mt-6">
+            <GlassCard className="p-5" delay={0.1}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05]">
+                    <Activity className="h-5 w-5 text-blue-300/85" strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-white/45">
+                      Performance
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-white">Activity index</h2>
+                    <p className="text-xs text-white/35">
+                      {kpis.isLive ? "Records per month · primary table" : "Preview data"}
+                    </p>
+                  </div>
+                </div>
+                {!exploreLoading && (
+                  <button
+                    onClick={() => void loadExplore()}
+                    className="rounded-lg p-1.5 text-white/35 transition hover:bg-white/[0.06] hover:text-white/70"
+                    title="Refresh data"
+                  >
+                    <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+                  </button>
+                )}
+              </div>
+              <div className="mt-4 h-[200px]">
+                {exploreLoading ? (
                   <div className="flex h-full items-center justify-center text-white/45">
                     <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={trendData}
-                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                    >
+                    <AreaChart data={kpis.trend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="bizArea" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="rgba(96,165,250,0.45)" />
                           <stop offset="100%" stopColor="rgba(96,165,250,0)" />
                         </linearGradient>
-                        <linearGradient id="bizSt" x1="0" y1="0" x2="1" y2="0">
+                        <linearGradient id="bizSt" x1="0" y1="1" x2="1" y2="0">
                           <stop offset="0%" stopColor="#38bdf8" />
                           <stop offset="100%" stopColor="#a78bfa" />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid
-                        strokeDasharray="4 8"
-                        stroke="rgba(248,250,252,0.06)"
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="m"
-                        tick={{ fill: "rgba(248,250,252,0.4)", fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: "rgba(248,250,252,0.35)", fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
+                      <CartesianGrid strokeDasharray="4 8" stroke="rgba(248,250,252,0.06)" vertical={false} />
+                      <XAxis dataKey="m" tick={{ fill: "rgba(248,250,252,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "rgba(248,250,252,0.35)", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip
                         contentStyle={{
                           background: "rgba(15,23,42,0.94)",
                           border: "1px solid rgba(255,255,255,0.1)",
                           borderRadius: "12px",
                         }}
-                        formatter={(value: number) => [formatPhpThousandsK(value), "Index"]}
+                        formatter={(v: number) => [v, kpis.isLive ? "Records" : "Index"]}
                       />
-                      <Area
-                        type="monotone"
-                        dataKey="v"
-                        stroke="url(#bizSt)"
-                        strokeWidth={2.5}
-                        fill="url(#bizArea)"
-                      />
+                      <Area type="monotone" dataKey="v" stroke="url(#bizSt)" strokeWidth={2.5} fill="url(#bizArea)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
               </div>
-            </div>
+            </GlassCard>
           </div>
-        </GlassCard>
-      </div>
+
+          {/* ── Data Explorer ── */}
+          <div className="mt-8">
+            <GlassCard className="p-6" delay={0.11}>
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05]">
+                  <Database className="h-5 w-5 text-purple-300/85" strokeWidth={1.75} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-white">Data Explorer</h2>
+                  <p className="text-xs text-white/40">
+                    {exploreLoading
+                      ? "Discovering tables…"
+                      : exploreData.length > 0
+                        ? `${exploreData.length} accessible table${exploreData.length !== 1 ? "s" : ""} from ServeWise`
+                        : "All accessible tables from your ServeWise Supabase project"}
+                  </p>
+                </div>
+              </div>
+              <DataExplorer
+                tables={exploreData}
+                loading={exploreLoading}
+                discoveredCount={exploreCount}
+              />
+            </GlassCard>
+          </div>
+        </>
+      )}
     </div>
   );
 }

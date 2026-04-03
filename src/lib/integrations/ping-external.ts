@@ -1,19 +1,16 @@
 import { supabaseRestHeaders } from "@/lib/integrations/supabase-rest-headers";
 
 /**
- * Server-only connectivity check. Does not log secrets.
- * Works with Supabase PostgREST (anon key) and other Bearer APIs.
+ * Pings the PostgREST OpenAPI endpoint (/rest/v1/) to verify that both the
+ * base URL and the API key are valid. Returns 200 when Supabase can be reached
+ * and the key is accepted.
  */
 export async function pingExternalMetrics(
   baseUrl: string,
   apiKey: string,
-  metricsPath: string,
-): Promise<
-  { ok: true } | { ok: false; status?: number; reason: "http" | "network" }
-> {
+): Promise<{ ok: true } | { ok: false; status?: number; reason: "http" | "network" }> {
   const base = baseUrl.replace(/\/+$/, "");
-  const path = metricsPath.startsWith("/") ? metricsPath : `/${metricsPath}`;
-  const url = `${base}${path}`;
+  const url = `${base}/rest/v1/`;
 
   try {
     const res = await fetch(url, {
@@ -23,9 +20,7 @@ export async function pingExternalMetrics(
       signal: AbortSignal.timeout(20_000),
     });
 
-    if (res.ok) {
-      return { ok: true };
-    }
+    if (res.ok) return { ok: true };
     return { ok: false, status: res.status, reason: "http" };
   } catch {
     return { ok: false, reason: "network" };
