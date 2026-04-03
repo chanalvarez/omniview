@@ -22,9 +22,11 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
 
   const [name, setName] = useState("");
   const [appUrl, setAppUrl] = useState("");
+  const [metricsPath, setMetricsPath] = useState("/v1/metrics");
   const [apiKey, setApiKey] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [shake, setShake] = useState(false);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -41,9 +43,11 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
     if (!open) return;
     setName("");
     setAppUrl("");
+    setMetricsPath("/v1/metrics");
     setApiKey("");
     setPhase("idle");
     setShake(false);
+    setErrorDetail(null);
   }, [open]);
 
   const inputError =
@@ -55,16 +59,19 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
     name.trim() &&
     appUrl.trim() &&
     apiKey.trim() &&
+    metricsPath.trim() &&
     phase !== "verifying" &&
     phase !== "success";
 
   const submit = async () => {
     if (!canSubmit) return;
+    setErrorDetail(null);
     setPhase("verifying");
     const result = await connectBusiness({
       name: name.trim(),
       baseUrl: appUrl.trim(),
       apiKey: apiKey.trim(),
+      metricsPath: metricsPath.trim(),
     });
 
     if (result.ok) {
@@ -76,6 +83,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
     }
 
     setPhase("error");
+    setErrorDetail(result.error);
     setShake(true);
     window.setTimeout(() => setShake(false), 520);
   };
@@ -130,8 +138,10 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
             </button>
           </div>
           <p className="mt-1 text-sm text-white/50">
-            Stored in Supabase as <span className="text-white/65">external_connections</span>,
-            scoped to your account. We verify your app before saving the key.
+            Verification: <span className="text-white/65">GET</span> your app URL + metrics path
+            (default <code className="text-white/70">/v1/metrics</code>) with{" "}
+            <code className="text-white/70">Authorization: Bearer</code>. Use the host where your
+            API actually lives — a Vercel landing page often has no metrics route.
           </p>
         </div>
 
@@ -211,7 +221,10 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                     value={name}
                     onChange={(e) => {
                       setName(e.target.value);
-                      if (phase === "error") setPhase("idle");
+                      if (phase === "error") {
+                        setPhase("idle");
+                        setErrorDetail(null);
+                      }
                     }}
                     placeholder="e.g. Harbor Logistics"
                     className={`w-full rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
@@ -224,20 +237,48 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                     htmlFor="biz-url"
                     className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
                   >
-                    App URL
+                    App URL (API base)
                   </label>
                   <input
                     id="biz-url"
                     value={appUrl}
                     onChange={(e) => {
                       setAppUrl(e.target.value);
-                      if (phase === "error") setPhase("idle");
+                      if (phase === "error") {
+                        setPhase("idle");
+                        setErrorDetail(null);
+                      }
                     }}
-                    placeholder="https://app.example.com"
+                    placeholder="https://api.your-servewise.com"
                     className={`w-full rounded-xl px-3.5 py-2.5 font-mono text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
                     autoComplete="off"
                     inputMode="url"
                   />
+                </div>
+                <div>
+                  <label
+                    htmlFor="biz-metrics-path"
+                    className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
+                  >
+                    Metrics path
+                  </label>
+                  <input
+                    id="biz-metrics-path"
+                    value={metricsPath}
+                    onChange={(e) => {
+                      setMetricsPath(e.target.value);
+                      if (phase === "error") {
+                        setPhase("idle");
+                        setErrorDetail(null);
+                      }
+                    }}
+                    placeholder="/v1/metrics"
+                    className={`w-full rounded-xl px-3.5 py-2.5 font-mono text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
+                    autoComplete="off"
+                  />
+                  <p className="mt-1 text-[11px] text-white/35">
+                    Must return HTTP 2xx JSON when called with your key.
+                  </p>
                 </div>
                 <div>
                   <label
@@ -252,7 +293,10 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                     value={apiKey}
                     onChange={(e) => {
                       setApiKey(e.target.value);
-                      if (phase === "error") setPhase("idle");
+                      if (phase === "error") {
+                        setPhase("idle");
+                        setErrorDetail(null);
+                      }
                     }}
                     placeholder="••••••••••••"
                     className={`w-full rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
@@ -261,8 +305,9 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                 </div>
 
                 {phase === "error" ? (
-                  <p className="text-sm text-red-300/90">
-                    Could not verify your API. Please verify the key with your developer.
+                  <p className="text-sm leading-snug text-red-300/90">
+                    {errorDetail ??
+                      "Could not verify your API. Check URL, metrics path, and key with your developer."}
                   </p>
                 ) : null}
 

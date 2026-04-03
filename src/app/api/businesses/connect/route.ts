@@ -48,8 +48,24 @@ export async function POST(request: Request) {
 
   const ping = await pingExternalMetrics(baseUrl, apiKey, metricsPath);
   if (!ping.ok) {
+    let message: string;
+    if (ping.reason === "network") {
+      message =
+        "Could not reach that URL (timeout, DNS, or blocked). Check the base URL is your API origin (HTTPS).";
+    } else if (ping.status === 404) {
+      message = `No route at "${metricsPath}" (HTTP 404). Use your real metrics path — default is /v1/metrics — or deploy an API that exposes it. A marketing site URL usually will not work.`;
+    } else if (ping.status === 401 || ping.status === 403) {
+      message =
+        "API returned unauthorized (HTTP " +
+        ping.status +
+        "). Check the API key matches what your backend expects for Authorization: Bearer.";
+    } else if (ping.status) {
+      message = `Metrics endpoint returned HTTP ${ping.status}. Fix the path, key, or server until GET returns 2xx.`;
+    } else {
+      message = "Could not verify the API endpoint.";
+    }
     return NextResponse.json(
-      { error: "verification_failed", message: "Could not verify API endpoint." },
+      { error: "verification_failed", message },
       { status: 400 },
     );
   }

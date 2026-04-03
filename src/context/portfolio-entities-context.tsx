@@ -92,6 +92,7 @@ type PortfolioEntitiesContextValue = {
     name: string;
     baseUrl: string;
     apiKey: string;
+    metricsPath?: string;
   }) => Promise<ConnectBusinessResult>;
   updateEntity: (
     id: string,
@@ -210,10 +211,12 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       name: string;
       baseUrl: string;
       apiKey: string;
+      metricsPath?: string;
     }): Promise<ConnectBusinessResult> => {
       const name = input.name.trim();
       const baseUrl = input.baseUrl.trim();
       const apiKey = input.apiKey.trim();
+      const metricsPath = input.metricsPath?.trim();
       if (!name || !baseUrl || !apiKey) {
         return { ok: false, error: "Please fill in all fields." };
       }
@@ -231,6 +234,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
             name,
             base_url: baseUrl,
             api_key: apiKey,
+            ...(metricsPath ? { metrics_path: metricsPath } : {}),
           }),
         });
 
