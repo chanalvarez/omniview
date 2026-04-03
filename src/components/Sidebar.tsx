@@ -33,7 +33,7 @@ export function Sidebar() {
       >
         <OmniViewLogo size="sm" />
       </Link>
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-1 flex-col gap-1">
         {items.map(({ href, label, icon: Icon }) => {
           const active =
             href === "/"

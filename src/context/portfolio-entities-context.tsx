@@ -27,28 +27,19 @@ type BusinessRow = {
   name: string;
   tagline?: string;
   created_at: string;
-  external_connections: { id: string } | { id: string }[] | null;
 };
 
 const STORAGE_KEY = "omniview.businesses.v1";
 const LEGACY_STORAGE_KEY = "omniview.entities.v1";
 const MIGRATION_FLAG = "omniview.cloud_migrated_v1";
 
-function hasExternalConnection(
-  ec: BusinessRow["external_connections"],
-): boolean {
-  if (ec == null) return false;
-  if (Array.isArray(ec)) return ec.length > 0;
-  return typeof ec === "object" && "id" in ec;
-}
-
-function mapRow(r: BusinessRow): CustomEntity {
+function mapRow(r: BusinessRow, connectedIds: Set<string>): CustomEntity {
   return {
     id: r.id,
     name: r.name,
     tagline: r.tagline ?? "",
     createdAt: new Date(r.created_at).getTime(),
-    integrationConnected: hasExternalConnection(r.external_connections),
+    integrationConnected: connectedIds.has(r.id),
   };
 }
 
@@ -140,7 +131,6 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
               id: b.id,
               user_id: sess.user.id,
               name: b.name,
-              tagline: b.tagline || "",
             });
           }
           localStorage.removeItem(STORAGE_KEY);
@@ -152,7 +142,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, user_id, name, created_at, external_connections ( id )")
+        .select("id, user_id, name, created_at")
         .order("created_at", { ascending: true });
 
       if (cancelled) return;
@@ -160,7 +150,18 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
         loadLocalIntoState();
         return;
       }
-      setCustomEntities((data as unknown as BusinessRow[]).map(mapRow));
+
+      // Separate query for which businesses have an integration — avoids join errors
+      const { data: connData } = await supabase
+        .from("external_connections")
+        .select("business_id");
+
+      if (cancelled) return;
+      const connectedIds = new Set(
+        (connData ?? []).map((c: { business_id: string }) => c.business_id),
+      );
+
+      setCustomEntities((data as unknown as BusinessRow[]).map((r) => mapRow(r, connectedIds)));
     };
 
     void supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -296,10 +297,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
           .single();
 
         if (error || !data) return null;
-        const entity = mapRow({
-          ...(data as unknown as BusinessRow),
-          external_connections: null,
-        });
+        const entity = mapRow(data as unknown as BusinessRow, new Set<string>());
         setCustomEntities((prev) => [...prev, entity]);
         return entity;
       }
