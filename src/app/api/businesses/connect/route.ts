@@ -82,54 +82,43 @@ export async function POST(request: Request) {
   type BizRow = { id: string; name: string; created_at: string };
 
   let biz: BizRow | null = null;
-  let isNew = true;
+  let isNew = false;
 
-  // Try with tagline column first; if column missing, retry without it
-  let insertResult = await supabase
+  // Check if this user already has a business with this name
+  const { data: existing } = await supabase
     .from("businesses")
-    .insert({ user_id: user.id, name, tagline: "" })
     .select("id, name, created_at")
-    .single();
+    .eq("user_id", user.id)
+    .eq("name", name)
+    .maybeSingle();
 
-  if (insertResult.error?.message?.includes("tagline")) {
-    insertResult = await supabase
+  if (existing) {
+    biz = existing as BizRow;
+  } else {
+    // Create new — try with tagline, fall back without it
+    let insertResult = await supabase
       .from("businesses")
-      .insert({ user_id: user.id, name })
+      .insert({ user_id: user.id, name, tagline: "" })
       .select("id, name, created_at")
       .single();
-  }
 
-  if (insertResult.error) {
-    const isDupe =
-      insertResult.error.message.includes("unique") ||
-      insertResult.error.message.includes("duplicate");
-
-    if (isDupe) {
-      // Business name already exists for this user — reuse it
-      const existing = await supabase
+    if (insertResult.error?.message?.includes("tagline")) {
+      insertResult = await supabase
         .from("businesses")
+        .insert({ user_id: user.id, name })
         .select("id, name, created_at")
-        .eq("user_id", user.id)
-        .eq("name", name)
-        .maybeSingle();
+        .single();
+    }
 
-      if (existing.data) {
-        biz = existing.data as BizRow;
-        isNew = false;
-      } else {
-        return NextResponse.json(
-          { error: insertResult.error.message },
-          { status: 400 },
-        );
-      }
-    } else {
+    if (insertResult.error) {
       return NextResponse.json(
         { error: insertResult.error.message ?? "Could not create business." },
         { status: 500 },
       );
     }
-  } else {
-    biz = insertResult.data;
+
+    biz = insertResult.data as BizRow;
+    isNew = true;
   }
 
   if (!biz) {
