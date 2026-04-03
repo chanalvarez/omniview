@@ -143,15 +143,18 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       const { data, error } = await supabase
         .from("businesses")
         .select("id, user_id, name, created_at")
+        .eq("user_id", sess.user.id)          // explicit filter — don't rely on RLS alone
         .order("created_at", { ascending: true });
 
       if (cancelled) return;
+
       if (error) {
-        loadLocalIntoState();
+        // Don't erase businesses on error — just mark as hydrated so UI renders
+        setHydrated(true);
         return;
       }
 
-      // Separate query for which businesses have an integration — avoids join errors
+      // Separate query for integration connection flags — avoids join errors
       const { data: connData } = await supabase
         .from("external_connections")
         .select("business_id");
@@ -162,13 +165,15 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       );
 
       setCustomEntities((data as unknown as BusinessRow[]).map((r) => mapRow(r, connectedIds)));
+      setHydrated(true);
     };
 
+    // getSession gives us the current session from cookie storage
     void supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (cancelled) return;
       setSession(s);
       if (s) {
-        setHydrated(true);
+        // Keep hydrated=false until loadCloud finishes — prevents empty-businesses flash
         void loadCloud(s);
       } else {
         loadLocalIntoState();
@@ -182,7 +187,6 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       if (cancelled) return;
       setSession(s);
       if (s) {
-        setHydrated(true);
         await loadCloud(s);
       } else {
         loadLocalIntoState();
