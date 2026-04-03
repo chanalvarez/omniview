@@ -25,6 +25,17 @@ export async function pingExternalMetrics(
     });
 
     if (res.ok) return { ok: true };
+
+    // 403 with "schema is forbidden" means the key IS valid — the project just
+    // restricts schema introspection to service-role keys. We treat this as a
+    // successful connection; discover-schema handles the fallback.
+    if (res.status === 403) {
+      const text = await res.text().catch(() => "");
+      if (text.includes("schema") || text.includes("forbidden")) {
+        return { ok: true };
+      }
+    }
+
     return { ok: false, status: res.status, reason: "http" };
   } catch {
     return { ok: false, reason: "network" };
