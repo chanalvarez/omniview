@@ -1,4 +1,5 @@
 import { normalizeExternalMetrics } from "@/lib/integrations/normalize-metrics";
+import { supabaseRestHeaders } from "@/lib/integrations/supabase-rest-headers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -67,10 +68,7 @@ export async function GET(
   try {
     const res = await fetch(fullUrl, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${integration.api_key}`,
-        Accept: "application/json",
-      },
+      headers: supabaseRestHeaders(integration.api_key),
       cache: "no-store",
       signal: AbortSignal.timeout(25_000),
     });

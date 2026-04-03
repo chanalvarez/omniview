@@ -1,6 +1,8 @@
+import { supabaseRestHeaders } from "@/lib/integrations/supabase-rest-headers";
+
 /**
  * Server-only connectivity check. Does not log secrets.
- * Expects a JSON-capable GET that returns 2xx with Bearer auth.
+ * Works with Supabase PostgREST (anon key) and other Bearer APIs.
  */
 export async function pingExternalMetrics(
   baseUrl: string,
@@ -16,10 +18,7 @@ export async function pingExternalMetrics(
   try {
     const res = await fetch(url, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
-      },
+      headers: supabaseRestHeaders(apiKey),
       cache: "no-store",
       signal: AbortSignal.timeout(20_000),
     });

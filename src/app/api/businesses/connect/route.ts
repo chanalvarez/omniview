@@ -2,8 +2,15 @@ import { pingExternalMetrics } from "@/lib/integrations/ping-external";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
-/** Fixed metrics route; ServeWise / integration API must expose this. */
-const DEFAULT_METRICS_PATH = "/v1/metrics";
+/**
+ * PostgREST path to ping (table, view, or RPC). Example:
+ * `/rest/v1/your_metrics_view?select=*&limit=1`
+ */
+function defaultMetricsPath(): string {
+  const p = process.env.INTEGRATION_METRICS_PATH?.trim();
+  if (p) return p.startsWith("/") ? p : `/${p}`;
+  return "/rest/v1/";
+}
 
 function integrationApiBaseUrl(): string | null {
   const fromEnv =
@@ -35,7 +42,7 @@ export async function POST(request: Request) {
   const name = body.name?.trim();
   const apiKey = body.api_key?.trim();
   const baseUrl = integrationApiBaseUrl();
-  const metricsPath = DEFAULT_METRICS_PATH;
+  const metricsPath = defaultMetricsPath();
 
   if (!name || !apiKey) {
     return NextResponse.json(
@@ -49,7 +56,7 @@ export async function POST(request: Request) {
       {
         error: "integration_not_configured",
         message:
-          "Server is missing INTEGRATION_API_BASE_URL (or NEXT_PUBLIC_INTEGRATION_API_BASE_URL). Add your ServeWise API base URL in Vercel → Environment Variables.",
+          "Server is missing INTEGRATION_API_BASE_URL (or NEXT_PUBLIC_INTEGRATION_API_BASE_URL). For Supabase REST use https://<project-ref>.supabase.co (no trailing slash).",
       },
       { status: 503 },
     );
@@ -70,12 +77,12 @@ export async function POST(request: Request) {
       message =
         "Could not reach the configured API URL (timeout, DNS, or blocked). Check INTEGRATION_API_BASE_URL is correct (HTTPS).";
     } else if (ping.status === 404) {
-      message = `No route at "${metricsPath}" (HTTP 404). Your API must expose GET ${metricsPath} or update the server default.`;
+      message = `No route at "${metricsPath}" (HTTP 404). For Supabase REST, set INTEGRATION_METRICS_PATH to a real PostgREST path (e.g. /rest/v1/your_view?select=*&limit=1).`;
     } else if (ping.status === 401 || ping.status === 403) {
       message =
         "API returned unauthorized (HTTP " +
         ping.status +
-        "). Check the integration API key matches what your backend expects for Authorization: Bearer.";
+        "). For Supabase, use the project anon key and ensure RLS allows this read; OmniView sends Authorization: Bearer and apikey.";
     } else if (ping.status) {
       message = `Metrics endpoint returned HTTP ${ping.status}. Fix the path, key, or server until GET returns 2xx.`;
     } else {
