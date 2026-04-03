@@ -122,13 +122,17 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
     let cancelled = false;
 
-    let loadingCloud = false;
+    // Safety net: always resolve the loading state within 6 seconds
+    const fallbackTimer = window.setTimeout(() => {
+      setHydrated(true);
+    }, 6000);
+
+    const markHydrated = () => {
+      clearTimeout(fallbackTimer);
+      if (!cancelled) setHydrated(true);
+    };
 
     const loadCloud = async (sess: Session) => {
-      // Prevent concurrent loads
-      if (loadingCloud) return;
-      loadingCloud = true;
-
       try {
         if (!localStorage.getItem(MIGRATION_FLAG)) {
           const local = readLocalBusinesses();
@@ -154,7 +158,6 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
         if (cancelled) return;
 
         if (!error && data) {
-          // Fetch connection status separately
           const { data: connData } = await supabase
             .from("external_connections")
             .select("business_id");
@@ -168,11 +171,10 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
           );
         }
       } catch {
-        /* Network or unexpected error — keep whatever is in state */
-      } finally {
-        loadingCloud = false;
-        if (!cancelled) setHydrated(true);
+        /* keep state as-is on error */
       }
+
+      markHydrated();
     };
 
     void supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -182,7 +184,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
         void loadCloud(s);
       } else {
         loadLocalIntoState();
-        setHydrated(true);
+        markHydrated();
       }
     });
 
@@ -192,15 +194,16 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       if (cancelled) return;
       setSession(s);
       if (s) {
-        await loadCloud(s);
+        void loadCloud(s);
       } else {
         loadLocalIntoState();
-        setHydrated(true);
+        markHydrated();
       }
     });
 
     return () => {
       cancelled = true;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, [loadLocalIntoState]);
