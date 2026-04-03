@@ -56,9 +56,9 @@ export function BusinessConnectionAlert({
   return (
     <>
     <div className="mt-3 grid grid-cols-3 gap-2">
-      {/* Total served */}
+      {/* Total records */}
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] px-2.5 py-2 text-center">
-        <p className="text-[10px] uppercase tracking-wider text-white/40">Total served</p>
+        <p className="text-[10px] uppercase tracking-wider text-white/40">Total records</p>
         <p className="mt-0.5 text-base font-semibold tabular-nums text-white">
           {totalCount >= 1000
             ? `${(totalCount / 1000).toFixed(1)}k`
@@ -75,7 +75,7 @@ export function BusinessConnectionAlert({
         <p className="mt-0.5 text-base font-semibold tabular-nums text-white">
           {thisMonthCount.toLocaleString()}
         </p>
-        <p className="text-[9px] text-white/30">served</p>
+        <p className="text-[9px] text-white/30">new records</p>
       </div>
 
       {/* Growth & per-day */}
