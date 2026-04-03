@@ -1,4 +1,4 @@
-import { pingExternalMetrics } from "@/lib/integrations/ping-external";
+import { discoverSchema } from "@/lib/integrations/discover-schema";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -59,23 +59,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify the key against the PostgREST OpenAPI endpoint
-  const ping = await pingExternalMetrics(baseUrl, apiKey);
-  if (!ping.ok) {
-    let message: string;
-    if (ping.reason === "network") {
-      message =
-        "Could not reach that URL (timeout, DNS, or HTTPS). Double-check the Supabase project URL.";
-    } else if (ping.status === 401) {
-      message = `Invalid key (HTTP 401). The anon key was rejected — make sure you copied the full key from Supabase → Project Settings → API → "Legacy anon, service_role API keys" tab → anon public.`;
-    } else if (ping.status === 403) {
-      message = `Access denied (HTTP 403). Try the legacy anon key (eyJ…) from Supabase → Project Settings → API.`;
-    } else if (ping.status) {
-      message = `URL returned HTTP ${ping.status}. Make sure this is a valid Supabase project URL.`;
-    } else {
-      message = "Could not verify the API endpoint.";
-    }
-    return NextResponse.json({ error: "verification_failed", message }, { status: 400 });
+  // Verify by trying schema discovery — this handles schema-forbidden projects
+  // by falling back to probing common table names directly.
+  // If at least one table responds (or schema loads), the key is valid.
+  const discovery = await discoverSchema(baseUrl, apiKey);
+  if (!discovery.ok) {
+    // Network error — can't reach the URL at all
+    return NextResponse.json(
+      {
+        error: "verification_failed",
+        message:
+          "Could not reach that URL. Check the Supabase project URL (e.g. https://xxxx.supabase.co).",
+      },
+      { status: 400 },
+    );
+  }
+  if (discovery.tables.length === 0) {
+    return NextResponse.json(
+      {
+        error: "verification_failed",
+        message:
+          "Connected but no accessible tables found. Make sure you have run the anon RLS policies (GRANT SELECT TO anon) on your tables.",
+      },
+      { status: 400 },
+    );
   }
 
   const now = new Date().toISOString();
