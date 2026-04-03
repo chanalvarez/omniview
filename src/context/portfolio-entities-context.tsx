@@ -372,15 +372,12 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
   );
 
   const signOut = useCallback(async () => {
-    try {
-      const supabase = createBrowserSupabaseClient();
-      if (supabase) await supabase.auth.signOut();
-    } catch {
-      /* ignore sign-out errors — still navigate away */
-    }
+    // Clear client-side session immediately so UI updates
     setSession(null);
     loadLocalIntoState();
-    window.location.assign("/login");
+    // Navigate to the server-side sign-out route which properly clears
+    // the auth cookie before redirecting to /login.
+    window.location.assign("/api/auth/signout");
   }, [loadLocalIntoState]);
 
   const cloudMode = Boolean(session && isSupabaseConfigured());
