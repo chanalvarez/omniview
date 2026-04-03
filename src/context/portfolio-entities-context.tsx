@@ -381,8 +381,14 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
   const signOut = useCallback(async () => {
     const supabase = createBrowserSupabaseClient();
-    if (supabase) await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setSession(null);
     loadLocalIntoState();
+    if (typeof window !== "undefined") {
+      window.location.assign("/login");
+    }
   }, [loadLocalIntoState]);
 
   const cloudMode = Boolean(session && isSupabaseConfigured());
