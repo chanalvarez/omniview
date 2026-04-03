@@ -142,7 +142,7 @@ export function EntityGrid({ homeLayout = false }: { homeLayout?: boolean }) {
             </div>
             <h3 className="mt-4 text-base font-semibold text-white">Add a business</h3>
             <p className="mt-2 max-w-[260px] text-sm leading-relaxed text-white/45">
-              App URL and API key — verified before anything is stored.
+              Business name and integration API key — verified before anything is stored.
             </p>
           </button>
           <button

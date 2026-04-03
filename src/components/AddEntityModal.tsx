@@ -21,8 +21,6 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
   const { connectBusiness } = usePortfolioEntities();
 
   const [name, setName] = useState("");
-  const [appUrl, setAppUrl] = useState("");
-  const [metricsPath, setMetricsPath] = useState("/v1/metrics");
   const [apiKey, setApiKey] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [shake, setShake] = useState(false);
@@ -42,8 +40,6 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
   useEffect(() => {
     if (!open) return;
     setName("");
-    setAppUrl("");
-    setMetricsPath("/v1/metrics");
     setApiKey("");
     setPhase("idle");
     setShake(false);
@@ -57,9 +53,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
 
   const canSubmit =
     name.trim() &&
-    appUrl.trim() &&
     apiKey.trim() &&
-    metricsPath.trim() &&
     phase !== "verifying" &&
     phase !== "success";
 
@@ -69,9 +63,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
     setPhase("verifying");
     const result = await connectBusiness({
       name: name.trim(),
-      baseUrl: appUrl.trim(),
       apiKey: apiKey.trim(),
-      metricsPath: metricsPath.trim(),
     });
 
     if (result.ok) {
@@ -138,10 +130,8 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
             </button>
           </div>
           <p className="mt-1 text-sm text-white/50">
-            Verification: <span className="text-white/65">GET</span> your app URL + metrics path
-            (default <code className="text-white/70">/v1/metrics</code>) with{" "}
-            <code className="text-white/70">Authorization: Bearer</code>. Use the host where your
-            API actually lives — a Vercel landing page often has no metrics route.
+            Enter a display name and your ServeWise integration API key. The API host is configured
+            on the server (<code className="text-white/65">INTEGRATION_API_BASE_URL</code>).
           </p>
         </div>
 
@@ -167,7 +157,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                   Verifying connection…
                 </p>
                 <p className="mt-1 text-center text-xs text-white/40">
-                  Test ping runs on the server only
+                  Server checks your key against the configured API
                 </p>
               </motion.div>
             ) : null}
@@ -226,7 +216,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                         setErrorDetail(null);
                       }
                     }}
-                    placeholder="e.g. Harbor Logistics"
+                    placeholder="e.g. ServeWise"
                     className={`w-full rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
                     autoComplete="organization"
                     autoFocus
@@ -234,58 +224,10 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                 </div>
                 <div>
                   <label
-                    htmlFor="biz-url"
-                    className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
-                  >
-                    App URL (API base)
-                  </label>
-                  <input
-                    id="biz-url"
-                    value={appUrl}
-                    onChange={(e) => {
-                      setAppUrl(e.target.value);
-                      if (phase === "error") {
-                        setPhase("idle");
-                        setErrorDetail(null);
-                      }
-                    }}
-                    placeholder="https://api.your-servewise.com"
-                    className={`w-full rounded-xl px-3.5 py-2.5 font-mono text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
-                    autoComplete="off"
-                    inputMode="url"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="biz-metrics-path"
-                    className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
-                  >
-                    Metrics path
-                  </label>
-                  <input
-                    id="biz-metrics-path"
-                    value={metricsPath}
-                    onChange={(e) => {
-                      setMetricsPath(e.target.value);
-                      if (phase === "error") {
-                        setPhase("idle");
-                        setErrorDetail(null);
-                      }
-                    }}
-                    placeholder="/v1/metrics"
-                    className={`w-full rounded-xl px-3.5 py-2.5 font-mono text-sm text-white outline-none transition placeholder:text-white/35 ${inputError}`}
-                    autoComplete="off"
-                  />
-                  <p className="mt-1 text-[11px] text-white/35">
-                    Must return HTTP 2xx JSON when called with your key.
-                  </p>
-                </div>
-                <div>
-                  <label
                     htmlFor="biz-key"
                     className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/45"
                   >
-                    API key
+                    Integration API key
                   </label>
                   <input
                     id="biz-key"
@@ -307,7 +249,7 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
                 {phase === "error" ? (
                   <p className="text-sm leading-snug text-red-300/90">
                     {errorDetail ??
-                      "Could not verify your API. Check URL, metrics path, and key with your developer."}
+                      "Could not verify your integration API key. Check with your developer or server configuration."}
                   </p>
                 ) : null}
 

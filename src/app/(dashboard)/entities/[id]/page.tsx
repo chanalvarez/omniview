@@ -229,7 +229,7 @@ export default function BusinessDetailPage() {
           <p className="mt-2 text-base text-white/45">
             {cloudMode
               ? "Connect ServeWise below to pull live KPIs."
-              : "Sign in for cloud sync, then connect your ServeWise API keys."}
+              : "Sign in for cloud sync, then connect your ServeWise integration API keys."}
           </p>
         )}
       </header>
@@ -257,7 +257,7 @@ export default function BusinessDetailPage() {
               <p className="mt-1 text-sm text-white/50">
                 OmniView calls your ServeWise HTTPS API using a bearer token. Set the
                 base URL (e.g. <code className="text-white/70">https://api.your-servewise.com</code>
-                ), metrics path (your API&apos;s summary endpoint), and API key. Adjust{" "}
+                ), metrics path (your API&apos;s summary endpoint), and integration API key. Adjust{" "}
                 <code className="text-white/70">normalize-metrics.ts</code> if field names differ.
               </p>
               {hasIntegration ? (
@@ -291,7 +291,7 @@ export default function BusinessDetailPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
-                    API key / bearer token
+                    Integration API key / bearer token
                   </label>
                   <input
                     type="password"

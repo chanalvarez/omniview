@@ -88,12 +88,7 @@ type PortfolioEntitiesContextValue = {
   addEntity: (
     input: { name: string; tagline?: string },
   ) => Promise<CustomEntity | null>;
-  connectBusiness: (input: {
-    name: string;
-    baseUrl: string;
-    apiKey: string;
-    metricsPath?: string;
-  }) => Promise<ConnectBusinessResult>;
+  connectBusiness: (input: { name: string; apiKey: string }) => Promise<ConnectBusinessResult>;
   updateEntity: (
     id: string,
     input: { name: string; tagline: string },
@@ -207,17 +202,10 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
   }, [customEntities, hydrated, session, persistLocal]);
 
   const connectBusiness = useCallback(
-    async (input: {
-      name: string;
-      baseUrl: string;
-      apiKey: string;
-      metricsPath?: string;
-    }): Promise<ConnectBusinessResult> => {
+    async (input: { name: string; apiKey: string }): Promise<ConnectBusinessResult> => {
       const name = input.name.trim();
-      const baseUrl = input.baseUrl.trim();
       const apiKey = input.apiKey.trim();
-      const metricsPath = input.metricsPath?.trim();
-      if (!name || !baseUrl || !apiKey) {
+      if (!name || !apiKey) {
         return { ok: false, error: "Please fill in all fields." };
       }
 
@@ -232,9 +220,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
           credentials: "include",
           body: JSON.stringify({
             name,
-            base_url: baseUrl,
             api_key: apiKey,
-            ...(metricsPath ? { metrics_path: metricsPath } : {}),
           }),
         });
 
@@ -255,7 +241,9 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
             json.message ??
             (json.error === "verification_failed"
               ? "Could not verify API endpoint."
-              : json.error) ??
+              : json.error === "integration_not_configured"
+                ? "Integration API URL is not configured on the server."
+                : json.error) ??
             "Connection failed.";
           return { ok: false, error: err };
         }

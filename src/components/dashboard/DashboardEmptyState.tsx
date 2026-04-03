@@ -64,8 +64,8 @@ export function DashboardEmptyState({ onSync, compact = false }: DashboardEmptyS
           compact ? "mt-1 text-xs md:text-sm" : "mt-3 text-base"
         }`}
       >
-        Connect your first app URL and API key. OmniView verifies the link, then pulls live
-        metrics into your dashboard.
+        Add your business name and integration API key. OmniView verifies against your configured
+        API, then pulls live metrics into your dashboard.
       </p>
       <button
         type="button"

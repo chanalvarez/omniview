@@ -27,7 +27,8 @@ export default function BusinessesPage() {
           <div>
             <h1 className="text-xl font-semibold text-white">Businesses</h1>
             <p className="text-sm text-white/50">
-              Secure connections: name, API URL, and key — verified before save.
+              Secure connections: name and integration API key — API host is set in server
+              environment.
             </p>
           </div>
         </div>

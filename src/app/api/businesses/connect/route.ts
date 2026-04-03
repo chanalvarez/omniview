@@ -2,7 +2,16 @@ import { pingExternalMetrics } from "@/lib/integrations/ping-external";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
+/** Fixed metrics route; ServeWise / integration API must expose this. */
 const DEFAULT_METRICS_PATH = "/v1/metrics";
+
+function integrationApiBaseUrl(): string | null {
+  const fromEnv =
+    process.env.INTEGRATION_API_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_INTEGRATION_API_BASE_URL?.trim();
+  if (!fromEnv) return null;
+  return fromEnv.replace(/\/+$/, "");
+}
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -15,9 +24,7 @@ export async function POST(request: Request) {
 
   let body: {
     name?: string;
-    base_url?: string;
     api_key?: string;
-    metrics_path?: string;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -26,15 +33,25 @@ export async function POST(request: Request) {
   }
 
   const name = body.name?.trim();
-  const baseUrl = body.base_url?.trim();
   const apiKey = body.api_key?.trim();
-  const rawPath = body.metrics_path?.trim() || DEFAULT_METRICS_PATH;
-  const metricsPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+  const baseUrl = integrationApiBaseUrl();
+  const metricsPath = DEFAULT_METRICS_PATH;
 
-  if (!name || !baseUrl || !apiKey) {
+  if (!name || !apiKey) {
     return NextResponse.json(
-      { error: "name, base_url, and api_key are required." },
+      { error: "name and api_key are required." },
       { status: 400 },
+    );
+  }
+
+  if (!baseUrl) {
+    return NextResponse.json(
+      {
+        error: "integration_not_configured",
+        message:
+          "Server is missing INTEGRATION_API_BASE_URL (or NEXT_PUBLIC_INTEGRATION_API_BASE_URL). Add your ServeWise API base URL in Vercel → Environment Variables.",
+      },
+      { status: 503 },
     );
   }
 
@@ -51,14 +68,14 @@ export async function POST(request: Request) {
     let message: string;
     if (ping.reason === "network") {
       message =
-        "Could not reach that URL (timeout, DNS, or blocked). Check the base URL is your API origin (HTTPS).";
+        "Could not reach the configured API URL (timeout, DNS, or blocked). Check INTEGRATION_API_BASE_URL is correct (HTTPS).";
     } else if (ping.status === 404) {
-      message = `No route at "${metricsPath}" (HTTP 404). Use your real metrics path — default is /v1/metrics — or deploy an API that exposes it. A marketing site URL usually will not work.`;
+      message = `No route at "${metricsPath}" (HTTP 404). Your API must expose GET ${metricsPath} or update the server default.`;
     } else if (ping.status === 401 || ping.status === 403) {
       message =
         "API returned unauthorized (HTTP " +
         ping.status +
-        "). Check the API key matches what your backend expects for Authorization: Bearer.";
+        "). Check the integration API key matches what your backend expects for Authorization: Bearer.";
     } else if (ping.status) {
       message = `Metrics endpoint returned HTTP ${ping.status}. Fix the path, key, or server until GET returns 2xx.`;
     } else {
