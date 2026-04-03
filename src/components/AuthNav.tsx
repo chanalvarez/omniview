@@ -20,7 +20,7 @@ export function AuthNav() {
   if (session?.user) {
     const email = session.user.email ?? "Account";
     return (
-      <div className="mt-auto flex w-full flex-col items-center gap-2 border-t border-white/[0.06] px-0.5 pb-2 pt-3">
+      <div className="flex w-full flex-col items-center gap-2 border-t border-white/[0.06] px-0.5 pb-2 pt-3">
         <span
           className="max-w-[3.5rem] truncate text-center text-[10px] leading-tight text-white/45"
           title={email}

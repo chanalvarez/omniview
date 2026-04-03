@@ -117,6 +117,7 @@ export default function BusinessDetailPage() {
   const [hasIntegration, setHasIntegration] = useState<boolean | null>(null);
 
   // Connect form state (for detail-page re-connect / update)
+  const [showConnectForm, setShowConnectForm] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [connectSaving, setConnectSaving] = useState(false);
@@ -276,57 +277,83 @@ export default function BusinessDetailPage() {
               <Link2 className="h-5 w-5 text-blue-300/85" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-white">
-                {hasIntegration ? "Update ServeWise connection" : "Connect ServeWise"}
-              </h2>
-              <p className="mt-1 text-sm text-white/50">
-                Enter your <strong className="text-white/70">Supabase project URL</strong> (e.g.{" "}
-                <code className="text-white/65">https://xxxx.supabase.co</code>) and the{" "}
-                <strong className="text-white/70">anon public</strong> key from Supabase → Project
-                Settings → API.
-              </p>
-              {hasIntegration && (
-                <p className="mt-1 text-xs font-medium text-emerald-300/80">
-                  Integration active. Fill below to update credentials.
-                </p>
+              {hasIntegration && !showConnectForm ? (
+                /* ── Already connected: show status + update toggle ── */
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-white">ServeWise connected</h2>
+                    <p className="mt-0.5 text-sm text-emerald-300/80">
+                      Live data is loading below.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowConnectForm(true)}
+                    className="shrink-0 rounded-lg border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/55 transition hover:bg-white/[0.1] hover:text-white/80"
+                  >
+                    Update credentials
+                  </button>
+                </div>
+              ) : (
+                /* ── Connect / update form ── */
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-base font-semibold text-white">
+                      {hasIntegration ? "Update credentials" : "Connect ServeWise"}
+                    </h2>
+                    {hasIntegration && (
+                      <button
+                        onClick={() => setShowConnectForm(false)}
+                        className="text-xs text-white/40 hover:text-white/70"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-white/50">
+                    Enter your <strong className="text-white/70">Supabase project URL</strong>{" "}
+                    (e.g. <code className="text-white/65">https://xxxx.supabase.co</code>) and the{" "}
+                    <strong className="text-white/70">anon public</strong> key from Supabase →
+                    Project Settings → API.
+                  </p>
+                  <form onSubmit={submitConnect} className="mt-4 space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
+                        Supabase project URL
+                      </label>
+                      <input
+                        value={baseUrl}
+                        onChange={(e) => setBaseUrl(e.target.value)}
+                        placeholder="https://xxxx.supabase.co"
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-blue-400/30 focus:ring-2"
+                        spellCheck={false}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
+                        Anon public key
+                      </label>
+                      <input
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none ring-blue-400/30 focus:ring-2"
+                        autoComplete="off"
+                      />
+                    </div>
+                    {connectMsg && <p className="text-sm text-white/55">{connectMsg}</p>}
+                    <button
+                      type="submit"
+                      disabled={connectSaving || !baseUrl.trim() || !apiKey.trim()}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-medium text-white transition hover:bg-white/[0.12] disabled:opacity-40"
+                    >
+                      {connectSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      Save &amp; connect
+                    </button>
+                  </form>
+                </>
               )}
-              <form onSubmit={submitConnect} className="mt-4 space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
-                    Supabase project URL
-                  </label>
-                  <input
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder="https://xxxx.supabase.co"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-blue-400/30 focus:ring-2"
-                    spellCheck={false}
-                    autoComplete="off"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs uppercase tracking-wider text-white/45">
-                    Anon public key
-                  </label>
-                  <input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none ring-blue-400/30 focus:ring-2"
-                    autoComplete="off"
-                  />
-                </div>
-                {connectMsg && <p className="text-sm text-white/55">{connectMsg}</p>}
-                <button
-                  type="submit"
-                  disabled={connectSaving || !baseUrl.trim() || !apiKey.trim()}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-medium text-white transition hover:bg-white/[0.12] disabled:opacity-40"
-                >
-                  {connectSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Save &amp; connect
-                </button>
-              </form>
             </div>
           </div>
         </GlassCard>

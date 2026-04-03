@@ -25,7 +25,7 @@ type BusinessRow = {
   id: string;
   user_id: string;
   name: string;
-  tagline: string;
+  tagline?: string;
   created_at: string;
   external_connections: { id: string } | { id: string }[] | null;
 };
@@ -152,7 +152,7 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, user_id, name, tagline, created_at, external_connections ( id )")
+        .select("id, user_id, name, created_at, external_connections ( id )")
         .order("created_at", { ascending: true });
 
       if (cancelled) return;
@@ -374,15 +374,15 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
   );
 
   const signOut = useCallback(async () => {
-    const supabase = createBrowserSupabaseClient();
-    if (supabase) {
-      await supabase.auth.signOut();
+    try {
+      const supabase = createBrowserSupabaseClient();
+      if (supabase) await supabase.auth.signOut();
+    } catch {
+      /* ignore sign-out errors — still navigate away */
     }
     setSession(null);
     loadLocalIntoState();
-    if (typeof window !== "undefined") {
-      window.location.assign("/login");
-    }
+    window.location.assign("/login");
   }, [loadLocalIntoState]);
 
   const cloudMode = Boolean(session && isSupabaseConfigured());
