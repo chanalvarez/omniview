@@ -122,58 +122,63 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
     let cancelled = false;
 
+    let loadingCloud = false;
+
     const loadCloud = async (sess: Session) => {
-      if (!localStorage.getItem(MIGRATION_FLAG)) {
-        const local = readLocalBusinesses();
-        if (local.length > 0) {
-          for (const b of local) {
-            await supabase.from("businesses").insert({
-              id: b.id,
-              user_id: sess.user.id,
-              name: b.name,
-            });
+      // Prevent concurrent loads
+      if (loadingCloud) return;
+      loadingCloud = true;
+
+      try {
+        if (!localStorage.getItem(MIGRATION_FLAG)) {
+          const local = readLocalBusinesses();
+          if (local.length > 0) {
+            for (const b of local) {
+              await supabase.from("businesses").insert({
+                id: b.id,
+                user_id: sess.user.id,
+                name: b.name,
+              });
+            }
+            localStorage.removeItem(STORAGE_KEY);
           }
-          localStorage.removeItem(STORAGE_KEY);
-          localStorage.setItem(MIGRATION_FLAG, "1");
-        } else {
           localStorage.setItem(MIGRATION_FLAG, "1");
         }
+
+        const { data, error } = await supabase
+          .from("businesses")
+          .select("id, user_id, name, created_at")
+          .eq("user_id", sess.user.id)
+          .order("created_at", { ascending: true });
+
+        if (cancelled) return;
+
+        if (!error && data) {
+          // Fetch connection status separately
+          const { data: connData } = await supabase
+            .from("external_connections")
+            .select("business_id");
+
+          if (cancelled) return;
+          const connectedIds = new Set(
+            (connData ?? []).map((c: { business_id: string }) => c.business_id),
+          );
+          setCustomEntities(
+            (data as unknown as BusinessRow[]).map((r) => mapRow(r, connectedIds)),
+          );
+        }
+      } catch {
+        /* Network or unexpected error — keep whatever is in state */
+      } finally {
+        loadingCloud = false;
+        if (!cancelled) setHydrated(true);
       }
-
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("id, user_id, name, created_at")
-        .eq("user_id", sess.user.id)          // explicit filter — don't rely on RLS alone
-        .order("created_at", { ascending: true });
-
-      if (cancelled) return;
-
-      if (error) {
-        // Don't erase businesses on error — just mark as hydrated so UI renders
-        setHydrated(true);
-        return;
-      }
-
-      // Separate query for integration connection flags — avoids join errors
-      const { data: connData } = await supabase
-        .from("external_connections")
-        .select("business_id");
-
-      if (cancelled) return;
-      const connectedIds = new Set(
-        (connData ?? []).map((c: { business_id: string }) => c.business_id),
-      );
-
-      setCustomEntities((data as unknown as BusinessRow[]).map((r) => mapRow(r, connectedIds)));
-      setHydrated(true);
     };
 
-    // getSession gives us the current session from cookie storage
     void supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (cancelled) return;
       setSession(s);
       if (s) {
-        // Keep hydrated=false until loadCloud finishes — prevents empty-businesses flash
         void loadCloud(s);
       } else {
         loadLocalIntoState();
