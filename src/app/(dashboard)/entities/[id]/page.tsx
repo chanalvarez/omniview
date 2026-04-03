@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -128,6 +128,8 @@ export default function BusinessDetailPage() {
   const [exploreCount, setExploreCount] = useState(0);
   const [exploreLoading, setExploreLoading] = useState(false);
   const [exploreError, setExploreError] = useState<string | null>(null);
+  const [exploreLastUpdated, setExploreLastUpdated] = useState<Date | null>(null);
+  const exploreIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadIntegrationFlag = useCallback(async () => {
     if (!cloudMode || !id) { setHasIntegration(false); return; }
@@ -141,9 +143,9 @@ export default function BusinessDetailPage() {
     setHasIntegration(!!data);
   }, [cloudMode, id]);
 
-  const loadExplore = useCallback(async () => {
+  const loadExplore = useCallback(async (silent = false) => {
     if (!cloudMode || !id) return;
-    setExploreLoading(true);
+    if (!silent) setExploreLoading(true);
     setExploreError(null);
     try {
       const res = await fetch(`/api/businesses/${id}/explore`, { credentials: "include" });
@@ -151,18 +153,28 @@ export default function BusinessDetailPage() {
       if (json.ok) {
         setExploreData(json.tables);
         setExploreCount(json.discoveredCount);
+        setExploreLastUpdated(new Date());
       } else {
         setExploreError(json.error ?? "Could not load data.");
       }
     } catch {
-      setExploreError("Network error while loading business data.");
+      if (!silent) setExploreError("Network error while loading business data.");
     } finally {
-      setExploreLoading(false);
+      if (!silent) setExploreLoading(false);
     }
   }, [cloudMode, id]);
 
   useEffect(() => { void loadIntegrationFlag(); }, [loadIntegrationFlag]);
-  useEffect(() => { if (hasIntegration === true) void loadExplore(); }, [hasIntegration, loadExplore]);
+
+  // Load explore data and set up 60-second auto-refresh
+  useEffect(() => {
+    if (hasIntegration !== true) return;
+    void loadExplore(false);
+    exploreIntervalRef.current = setInterval(() => void loadExplore(true), 60_000);
+    return () => {
+      if (exploreIntervalRef.current) clearInterval(exploreIntervalRef.current);
+    };
+  }, [hasIntegration, loadExplore]);
 
   const submitConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -450,15 +462,21 @@ export default function BusinessDetailPage() {
                     </p>
                   </div>
                 </div>
-                {!exploreLoading && (
+                <div className="flex items-center gap-2">
+                  {exploreLastUpdated && (
+                    <span className="text-[10px] text-white/25">
+                      Updated {exploreLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                    </span>
+                  )}
                   <button
-                    onClick={() => void loadExplore()}
-                    className="rounded-lg p-1.5 text-white/35 transition hover:bg-white/[0.06] hover:text-white/70"
+                    onClick={() => void loadExplore(false)}
+                    disabled={exploreLoading}
+                    className="rounded-lg p-1.5 text-white/35 transition hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-40"
                     title="Refresh data"
                   >
-                    <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+                    <RefreshCw className={`h-4 w-4 ${exploreLoading ? "animate-spin" : ""}`} strokeWidth={1.75} />
                   </button>
-                )}
+                </div>
               </div>
               <div className="mt-4 h-[200px]">
                 {exploreLoading ? (

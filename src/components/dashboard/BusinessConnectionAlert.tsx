@@ -1,8 +1,10 @@
 "use client";
 
 import type { SummaryResponse } from "@/app/api/businesses/[id]/summary/route";
-import { TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const REFRESH_INTERVAL_MS = 30_000;
 
 export function BusinessConnectionAlert({
   businessId,
@@ -12,16 +14,34 @@ export function BusinessConnectionAlert({
   integrationConnected?: boolean;
 }) {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchSummary = useCallback(async (silent = false) => {
+    if (!silent) setRefreshing(true);
+    try {
+      const res = await fetch(`/api/businesses/${businessId}/summary`, { credentials: "include" });
+      const j = (await res.json()) as SummaryResponse;
+      setSummary(j);
+      setLastUpdated(new Date());
+    } catch {
+      /* keep previous data */
+    } finally {
+      if (!silent) setRefreshing(false);
+    }
+  }, [businessId]);
 
   useEffect(() => {
     if (!integrationConnected) return;
-    let cancelled = false;
-    void fetch(`/api/businesses/${businessId}/summary`, { credentials: "include" })
-      .then((r) => r.json() as Promise<SummaryResponse>)
-      .then((j) => { if (!cancelled) setSummary(j); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [businessId, integrationConnected]);
+    void fetchSummary(false);
+
+    // Auto-refresh every 30 seconds
+    intervalRef.current = setInterval(() => void fetchSummary(true), REFRESH_INTERVAL_MS);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [businessId, integrationConnected, fetchSummary]);
 
   if (!integrationConnected) return null;
   if (!summary?.ok) return null;
@@ -29,7 +49,12 @@ export function BusinessConnectionAlert({
   const { totalCount, thisMonthCount, growthPct, perDayAvg, primaryTable } = summary;
   const growing = growthPct !== null && growthPct >= 0;
 
+  const updatedLabel = lastUpdated
+    ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : null;
+
   return (
+    <>
     <div className="mt-3 grid grid-cols-3 gap-2">
       {/* Total served */}
       <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] px-2.5 py-2 text-center">
@@ -76,5 +101,21 @@ export function BusinessConnectionAlert({
         )}
       </div>
     </div>
+    {/* Last updated + manual refresh */}
+    <div className="mt-1.5 flex items-center justify-between gap-2">
+      {updatedLabel && (
+        <p className="text-[10px] text-white/25">Updated {updatedLabel}</p>
+      )}
+      <button
+        onClick={() => void fetchSummary(false)}
+        disabled={refreshing}
+        className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-white/30 transition hover:bg-white/[0.05] hover:text-white/55 disabled:opacity-40"
+        title="Refresh stats"
+      >
+        <RefreshCw className={`h-2.5 w-2.5 ${refreshing ? "animate-spin" : ""}`} strokeWidth={2.5} />
+        Refresh
+      </button>
+    </div>
+    </>
   );
 }
