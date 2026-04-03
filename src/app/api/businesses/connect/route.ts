@@ -78,44 +78,81 @@ export async function POST(request: Request) {
 
   const now = new Date().toISOString();
 
-  // Try inserting with tagline first; if the column doesn't exist yet, retry without it.
-  let bizInsert = await supabase
+  // ── Find or create the business row ──────────────────────────────────────
+  type BizRow = { id: string; name: string; created_at: string };
+
+  let biz: BizRow | null = null;
+  let isNew = true;
+
+  // Try with tagline column first; if column missing, retry without it
+  let insertResult = await supabase
     .from("businesses")
     .insert({ user_id: user.id, name, tagline: "" })
     .select("id, name, created_at")
     .single();
 
-  if (bizInsert.error?.message?.includes("tagline")) {
-    bizInsert = await supabase
+  if (insertResult.error?.message?.includes("tagline")) {
+    insertResult = await supabase
       .from("businesses")
       .insert({ user_id: user.id, name })
       .select("id, name, created_at")
       .single();
   }
 
-  const { data: business, error: bizError } = bizInsert;
+  if (insertResult.error) {
+    const isDupe =
+      insertResult.error.message.includes("unique") ||
+      insertResult.error.message.includes("duplicate");
 
-  if (bizError || !business) {
-    return NextResponse.json(
-      { error: bizError?.message ?? "Could not create business." },
-      { status: 500 },
-    );
+    if (isDupe) {
+      // Business name already exists for this user — reuse it
+      const existing = await supabase
+        .from("businesses")
+        .select("id, name, created_at")
+        .eq("user_id", user.id)
+        .eq("name", name)
+        .maybeSingle();
+
+      if (existing.data) {
+        biz = existing.data as BizRow;
+        isNew = false;
+      } else {
+        return NextResponse.json(
+          { error: insertResult.error.message },
+          { status: 400 },
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { error: insertResult.error.message ?? "Could not create business." },
+        { status: 500 },
+      );
+    }
+  } else {
+    biz = insertResult.data;
   }
 
-  const biz = business as { id: string; name: string; created_at: string };
+  if (!biz) {
+    return NextResponse.json({ error: "Could not create or find the business." }, { status: 500 });
+  }
 
-  const { error: connError } = await supabase.from("external_connections").insert({
-    business_id: biz.id,
-    provider: "servewise",
-    base_url: baseUrl,
-    api_key: apiKey,
-    metrics_path: "/rest/v1/",
-    verified_at: now,
-    updated_at: now,
-  });
+  // ── Upsert external_connection (handles reconnect case too) ───────────────
+  const { error: connError } = await supabase.from("external_connections").upsert(
+    {
+      business_id: biz.id,
+      provider: "servewise",
+      base_url: baseUrl,
+      api_key: apiKey,
+      metrics_path: "/rest/v1/",
+      verified_at: now,
+      updated_at: now,
+    },
+    { onConflict: "business_id" },
+  );
 
   if (connError) {
-    await supabase.from("businesses").delete().eq("id", biz.id);
+    // Only roll back if we just created this business
+    if (isNew) await supabase.from("businesses").delete().eq("id", biz.id);
     return NextResponse.json({ error: connError.message }, { status: 500 });
   }
 
