@@ -10,7 +10,7 @@ import { ArrowUpRight, Building2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-export function EntityGrid() {
+export function EntityGrid({ homeLayout = false }: { homeLayout?: boolean }) {
   const { customEntities, hydrated } = usePortfolioEntities();
   const [addOpen, setAddOpen] = useState(false);
 
@@ -26,7 +26,18 @@ export function EntityGrid() {
   if (customEntities.length === 0) {
     return (
       <>
-        <DashboardEmptyState onSync={() => setAddOpen(true)} />
+        <div
+          className={
+            homeLayout
+              ? "flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center overflow-y-auto md:min-h-0 md:overflow-y-auto"
+              : undefined
+          }
+        >
+          <DashboardEmptyState
+            compact={homeLayout}
+            onSync={() => setAddOpen(true)}
+          />
+        </div>
         <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />
       </>
     );

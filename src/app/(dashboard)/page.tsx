@@ -4,21 +4,23 @@ import { PortfolioStats } from "@/components/dashboard/PortfolioStats";
 
 export default function HomePage() {
   return (
-    <div className="px-5 py-8 md:px-8 md:py-10 lg:px-12">
-      <header className="mb-10 max-w-4xl">
-        <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-5 md:gap-3 md:px-8 md:py-3 lg:px-12">
+      <header className="shrink-0 max-w-4xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
           Executive dashboard
         </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-white/55">
-          Unified glass cockpit for your operating companies, revenue, risk, and runway
-          in one calm view.
-        </p>
       </header>
 
-      <div className="flex flex-col gap-10">
-        <PortfolioStats />
-        <EntityGrid />
-        <PortfolioPerformanceChart />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 md:gap-3">
+        <div className="shrink-0">
+          <PortfolioStats compact />
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <EntityGrid homeLayout />
+        </div>
+        <div className="shrink-0">
+          <PortfolioPerformanceChart compact />
+        </div>
       </div>
     </div>
   );

@@ -171,9 +171,8 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       if (cancelled) return;
       setSession(s);
       if (s) {
-        void loadCloud(s).finally(() => {
-          if (!cancelled) setHydrated(true);
-        });
+        setHydrated(true);
+        void loadCloud(s);
       } else {
         loadLocalIntoState();
         setHydrated(true);
@@ -186,9 +185,11 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
       if (cancelled) return;
       setSession(s);
       if (s) {
+        setHydrated(true);
         await loadCloud(s);
       } else {
         loadLocalIntoState();
+        setHydrated(true);
       }
     });
 

@@ -8,9 +8,10 @@ import { AlertTriangle, TrendingUp, Wallet } from "lucide-react";
 const PORTFOLIO_REVENUE_PHP = 158_400_000;
 const PORTFOLIO_NET_PROFIT_PHP = 34_300_000;
 
-export function PortfolioStats() {
+export function PortfolioStats({ compact = false }: { compact?: boolean }) {
   const { customEntities, hydrated } = usePortfolioEntities();
   const hasBusinesses = hydrated && customEntities.length > 0;
+  const pad = compact ? "p-4" : "p-5";
 
   const stats = [
     {
@@ -40,21 +41,30 @@ export function PortfolioStats() {
   ] as const;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-3">
       {stats.map((s, i) => (
-        <GlassCard key={s.label} delay={i * 0.06} className="p-5">
+        <GlassCard key={s.label} delay={i * 0.06} className={pad}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-white/45">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-white/45">
                 {s.label}
               </p>
-              <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-white">
+              <p
+                className={`mt-1.5 font-semibold tabular-nums tracking-tight text-white ${compact ? "text-2xl" : "text-3xl"}`}
+              >
                 {s.getValue()}
               </p>
-              <p className="mt-1 text-sm text-white/50">{s.sub}</p>
+              <p className={`mt-0.5 text-white/50 ${compact ? "text-xs" : "text-sm"}`}>
+                {s.sub}
+              </p>
             </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05]">
-              <s.icon className="h-5 w-5 text-blue-300/90" strokeWidth={1.75} />
+            <div
+              className={`flex shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] ${compact ? "h-9 w-9" : "h-10 w-10"}`}
+            >
+              <s.icon
+                className={`text-blue-300/90 ${compact ? "h-4 w-4" : "h-5 w-5"}`}
+                strokeWidth={1.75}
+              />
             </div>
           </div>
         </GlassCard>

@@ -31,29 +31,35 @@ const data = [
 
 const CURRENT_RUN_RATE_MILLIONS = data[data.length - 1].total;
 
-export function PortfolioPerformanceChart() {
+export function PortfolioPerformanceChart({ compact = false }: { compact?: boolean }) {
   const { customEntities, hydrated } = usePortfolioEntities();
   const hasBusinesses = hydrated && customEntities.length > 0;
+  const pad = compact ? "p-4 md:p-5" : "p-5 md:p-6";
+  const chartH = compact ? "h-[200px] md:h-[clamp(170px,22vh,240px)]" : "h-[280px]";
 
   return (
-    <GlassCard delay={0.4} className="p-5 md:p-6">
+    <GlassCard delay={0.4} className={pad}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-white/45">
             Analytics
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-white">
+          <h2
+            className={`font-semibold text-white ${compact ? "mt-0.5 text-lg" : "mt-1 text-xl"}`}
+          >
             Portfolio performance
           </h2>
-          <p className="mt-1 text-sm text-white/50">
+          <p className={`text-white/50 ${compact ? "mt-0.5 text-xs" : "mt-1 text-sm"}`}>
             {hasBusinesses
               ? "Consolidated revenue (PHP millions) · trailing 9 months"
               : "Add at least one business to see portfolio trends."}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-white/40">Current run rate</p>
-          <p className="text-lg font-semibold tabular-nums text-white">
+          <p className="text-[11px] text-white/40 md:text-xs">Current run rate</p>
+          <p
+            className={`font-semibold tabular-nums text-white ${compact ? "text-base" : "text-lg"}`}
+          >
             {hasBusinesses
               ? formatPhpCompact(CURRENT_RUN_RATE_MILLIONS * 1_000_000)
               : "—"}
@@ -61,7 +67,7 @@ export function PortfolioPerformanceChart() {
         </div>
       </div>
       {hasBusinesses ? (
-        <div className="mt-6 h-[280px] w-full">
+        <div className={`mt-4 w-full md:mt-5 ${compact ? chartH : "h-[280px]"}`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
               <defs>
@@ -119,7 +125,9 @@ export function PortfolioPerformanceChart() {
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="mt-6 flex h-[200px] items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/[0.02] text-sm text-white/45">
+        <div
+          className={`mt-4 flex items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/[0.02] text-white/45 md:mt-5 ${compact ? "min-h-[100px] py-6 text-xs md:min-h-[120px] md:text-sm" : "h-[200px] text-sm"}`}
+        >
           Chart unlocks when your first business is connected.
         </div>
       )}

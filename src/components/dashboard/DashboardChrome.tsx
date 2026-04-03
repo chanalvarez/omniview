@@ -12,29 +12,32 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
     "there";
 
   return (
-    <div className="relative z-[1] flex min-h-screen">
+    <div className="relative z-[1] min-h-screen min-h-[100dvh]">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-white/[0.07] bg-[rgba(3,7,18,0.35)] px-5 py-4 backdrop-blur-xl md:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-h-screen min-h-[100dvh] min-w-0 flex-col pl-14">
+        <header className="shrink-0 border-b border-white/[0.07] bg-[rgba(3,7,18,0.35)] px-4 py-3 backdrop-blur-xl sm:px-5 md:px-8 md:py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
             <div className="min-w-0 flex-1">
               {hydrated ? (
-                <p className="font-[family-name:var(--font-geist-sans)] text-lg font-bold tracking-tight text-white md:text-xl">
+                <p className="font-[family-name:var(--font-geist-sans)] text-base font-bold tracking-tight text-white md:text-lg">
                   Welcome,{" "}
                   <span className="bg-gradient-to-r from-white to-white/85 bg-clip-text text-transparent">
                     {displayName}
                   </span>
                 </p>
               ) : (
-                <div className="h-7 w-48 animate-pulse rounded-lg bg-white/[0.06]" />
+                <div className="h-6 w-40 animate-pulse rounded-lg bg-white/[0.06] md:h-7" />
               )}
-              <p className="mt-0.5 text-sm text-white/45">
-                Your portfolio intelligence at a glance
+              <p className="mt-0.5 max-w-2xl text-xs leading-snug text-white/50 md:text-sm md:leading-relaxed">
+                Unified glass cockpit for your operating companies, revenue, risk, and
+                runway in one calm view.
               </p>
             </div>
           </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+          {children}
+        </main>
       </div>
     </div>
   );

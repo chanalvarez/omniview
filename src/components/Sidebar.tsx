@@ -23,7 +23,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="relative z-10 flex min-h-screen w-14 shrink-0 flex-col items-center border-r border-white/[0.07] bg-[rgba(15,23,42,0.35)] py-5 backdrop-blur-md"
+      className="fixed left-0 top-0 z-20 flex h-[100dvh] w-14 flex-col items-center border-r border-white/[0.07] bg-[rgba(15,23,42,0.45)] py-4 pb-3 backdrop-blur-xl"
       aria-label="Primary"
     >
       <Link
