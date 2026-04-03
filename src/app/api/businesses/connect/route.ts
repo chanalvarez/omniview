@@ -66,8 +66,10 @@ export async function POST(request: Request) {
     if (ping.reason === "network") {
       message =
         "Could not reach that URL (timeout, DNS, or HTTPS). Double-check the Supabase project URL.";
-    } else if (ping.status === 401 || ping.status === 403) {
-      message = `Invalid key (HTTP ${ping.status}). Use the anon public key from Supabase → Project Settings → API.`;
+    } else if (ping.status === 401) {
+      message = `Invalid key (HTTP 401). The anon key was rejected — make sure you copied the full key from Supabase → Project Settings → API → "Legacy anon, service_role API keys" tab → anon public.`;
+    } else if (ping.status === 403) {
+      message = `Access denied (HTTP 403). Try the legacy anon key (eyJ…) from Supabase → Project Settings → API.`;
     } else if (ping.status) {
       message = `URL returned HTTP ${ping.status}. Make sure this is a valid Supabase project URL.`;
     } else {
