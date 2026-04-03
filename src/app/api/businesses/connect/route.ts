@@ -64,12 +64,11 @@ export async function POST(request: Request) {
   // If at least one table responds (or schema loads), the key is valid.
   const discovery = await discoverSchema(baseUrl, apiKey);
   if (!discovery.ok) {
-    // Network error — can't reach the URL at all
     return NextResponse.json(
       {
         error: "verification_failed",
         message:
-          "Could not reach that URL. Check the Supabase project URL (e.g. https://xxxx.supabase.co).",
+          "Could not reach that URL. Check the Supabase project URL (e.g. https://xxxx.supabase.co) and your internet connection.",
       },
       { status: 400 },
     );
@@ -79,7 +78,7 @@ export async function POST(request: Request) {
       {
         error: "verification_failed",
         message:
-          "Connected but no accessible tables found. Make sure you have run the anon RLS policies (GRANT SELECT TO anon) on your tables.",
+          "URL reached but no accessible tables found. Make sure you ran the anon RLS policy SQL on your tables in Supabase.",
       },
       { status: 400 },
     );

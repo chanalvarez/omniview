@@ -52,24 +52,14 @@ export async function discoverSchema(
     if (res.ok) {
       const spec = (await res.json()) as unknown;
       const tables = parseOpenApiTables(spec);
-      return { ok: true, tables };
+      // If schema loaded but listed no tables, still try probing
+      if (tables.length > 0) return { ok: true, tables };
     }
 
-    // Schema endpoint blocked (common when project restricts introspection to service-role)
-    if (res.status === 403) {
-      const text = await res.text().catch(() => "");
-      if (text.includes("schema") || text.includes("forbidden")) {
-        const tables = await probeTableNames(base, apiKey);
-        return { ok: true, tables };
-      }
-    }
-
-    return {
-      ok: false,
-      status: res.status,
-      reason: "http",
-      error: `OpenAPI spec returned HTTP ${res.status}`,
-    };
+    // Schema endpoint blocked or returned no tables — fall back to probing
+    // common table names directly. This handles 401, 403, or any other status.
+    const tables = await probeTableNames(base, apiKey);
+    return { ok: true, tables };
   } catch (e) {
     return {
       ok: false,
