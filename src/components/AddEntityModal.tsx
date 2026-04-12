@@ -78,6 +78,11 @@ export function AddEntityModal({ open, onOpenChange }: AddEntityModalProps) {
       return;
     }
 
+    if (!result.error) {
+      setPhase("idle");
+      return;
+    }
+
     setPhase("error");
     setErrorDetail(result.error);
     setShake(true);

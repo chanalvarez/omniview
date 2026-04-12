@@ -1,6 +1,7 @@
 "use client";
 
 import { OmniViewLogo } from "@/components/OmniViewLogo";
+import { isDemoMode, showDemoRestriction } from "@/lib/demo";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -54,6 +55,10 @@ function LoginPortalInner() {
 
   const submitRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDemoMode()) {
+      showDemoRestriction();
+      return;
+    }
     setError(null);
     const supabase = createBrowserSupabaseClient();
     if (!supabase) {

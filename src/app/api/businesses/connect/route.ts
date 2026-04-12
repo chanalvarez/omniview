@@ -11,6 +11,13 @@ function envBaseUrl(): string | null {
 }
 
 export async function POST(request: Request) {
+  if (process.env.NEXT_PUBLIC_IS_DEMO === "true") {
+    return NextResponse.json(
+      { error: "demo_mode", message: "This action is disabled in demo mode." },
+      { status: 403 },
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   if (!supabase) {
     return NextResponse.json(

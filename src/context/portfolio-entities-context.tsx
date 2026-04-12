@@ -1,6 +1,7 @@
 "use client";
 
 import { createBrowserSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { isDemoMode, showDemoRestriction } from "@/lib/demo";
 import {
   createContext,
   useCallback,
@@ -216,6 +217,11 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
   const connectBusiness = useCallback(
     async (input: { name: string; apiKey: string; baseUrl?: string }): Promise<ConnectBusinessResult> => {
+      if (isDemoMode()) {
+        showDemoRestriction();
+        return { ok: false, error: "" };
+      }
+
       const name = input.name.trim();
       const apiKey = input.apiKey.trim();
       const baseUrl = input.baseUrl?.trim() ?? "";
@@ -292,6 +298,11 @@ export function PortfolioEntitiesProvider({ children }: { children: ReactNode })
 
   const addEntity = useCallback(
     async (input: { name: string; tagline?: string }): Promise<CustomEntity | null> => {
+      if (isDemoMode()) {
+        showDemoRestriction();
+        return null;
+      }
+
       const name = input.name.trim();
       if (!name) return null;
       const tagline = (input.tagline ?? "").trim();

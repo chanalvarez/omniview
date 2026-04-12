@@ -29,6 +29,7 @@ import {
   YAxis,
 } from "recharts";
 import { sumColumn } from "@/lib/integrations/fetch-table-data";
+import { isDemoMode, showDemoRestriction } from "@/lib/demo";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -178,6 +179,10 @@ export default function BusinessDetailPage() {
 
   const submitConnect = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDemoMode()) {
+      showDemoRestriction();
+      return;
+    }
     setConnectMsg(null);
     setConnectSaving(true);
     try {
