@@ -15,25 +15,25 @@ ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS tagline text NOT NULL DEF
 INSERT INTO public.businesses (user_id, name, tagline, created_at)
 VALUES
   (
-    'YOUR_DEMO_USER_UUID'::uuid,
+    'e0e2f051-2713-46e0-a17d-a2fbe15440d0'::uuid,
     'Northwind Traders Inc.',
     'Regional wholesale & distribution',
     now() - interval '72 days'
   ),
   (
-    'YOUR_DEMO_USER_UUID'::uuid,
+    'e0e2f051-2713-46e0-a17d-a2fbe15440d0'::uuid,
     'Sterling Coffee Roasters',
     'Specialty retail cafés & B2B supply',
     now() - interval '54 days'
   ),
   (
-    'YOUR_DEMO_USER_UUID'::uuid,
+    'e0e2f051-2713-46e0-a17d-a2fbe15440d0'::uuid,
     'Harborline Logistics',
     'Last-mile fulfillment & warehousing',
     now() - interval '36 days'
   ),
   (
-    'YOUR_DEMO_USER_UUID'::uuid,
+    'e0e2f051-2713-46e0-a17d-a2fbe15440d0'::uuid,
     'Vertex SaaS Co.',
     'B2B subscription analytics platform',
     now() - interval '18 days'
