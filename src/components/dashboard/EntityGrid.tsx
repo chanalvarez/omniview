@@ -5,6 +5,7 @@ import { BusinessConnectionAlert } from "@/components/dashboard/BusinessConnecti
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import { GlassCard } from "@/components/GlassCard";
 import { usePortfolioEntities } from "@/context/portfolio-entities-context";
+import { isDemoMode, showDemoConnect } from "@/lib/demo";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, Building2, Plus } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +14,12 @@ import { useState } from "react";
 export function EntityGrid({ homeLayout = false }: { homeLayout?: boolean }) {
   const { customEntities, hydrated } = usePortfolioEntities();
   const [addOpen, setAddOpen] = useState(false);
+  const demo = isDemoMode();
+
+  const handleConnectClick = () => {
+    if (demo) { showDemoConnect(); return; }
+    setAddOpen(true);
+  };
 
   if (!hydrated) {
     return (
@@ -35,10 +42,10 @@ export function EntityGrid({ homeLayout = false }: { homeLayout?: boolean }) {
         >
           <DashboardEmptyState
             compact={homeLayout}
-            onSync={() => setAddOpen(true)}
+            onSync={handleConnectClick}
           />
         </div>
-        <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />
+        {!demo && <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />}
       </>
     );
   }
@@ -98,15 +105,21 @@ export function EntityGrid({ homeLayout = false }: { homeLayout?: boolean }) {
                         )}
                       </div>
                     </div>
-                    <span
-                      className={
-                        b.integrationConnected
-                          ? "shrink-0 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300/95"
-                          : "shrink-0 rounded-full border border-amber-400/25 bg-amber-400/8 px-2.5 py-0.5 text-[11px] font-medium text-amber-200/90"
-                      }
-                    >
-                      {b.integrationConnected ? "Connected" : "Pending"}
-                    </span>
+                    {demo ? (
+                      <span className="shrink-0 rounded-full border border-violet-400/25 bg-violet-400/10 px-2.5 py-0.5 text-[11px] font-medium text-violet-300/90">
+                        Simulated
+                      </span>
+                    ) : (
+                      <span
+                        className={
+                          b.integrationConnected
+                            ? "shrink-0 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300/95"
+                            : "shrink-0 rounded-full border border-amber-400/25 bg-amber-400/8 px-2.5 py-0.5 text-[11px] font-medium text-amber-200/90"
+                        }
+                      >
+                        {b.integrationConnected ? "Connected" : "Pending"}
+                      </span>
+                    )}
                   </div>
                   <BusinessConnectionAlert
                     businessId={b.id}
@@ -125,37 +138,39 @@ export function EntityGrid({ homeLayout = false }: { homeLayout?: boolean }) {
           ))}
         </AnimatePresence>
 
-        <GlassCard
-          delay={0.34}
-          className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center md:min-h-0"
-        >
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="group flex flex-col items-center rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+        {!demo && (
+          <GlassCard
+            delay={0.34}
+            className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center md:min-h-0"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.04] transition group-hover:border-white/30 group-hover:bg-white/[0.07]">
-              <Plus
-                className="h-7 w-7 text-white/45 transition group-hover:text-white/65"
-                strokeWidth={1.5}
-              />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-white">Add a business</h3>
-            <p className="mt-2 max-w-[260px] text-sm leading-relaxed text-white/45">
-              Business name and integration API key — verified before anything is stored.
-            </p>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="mt-5 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/[0.1]"
-          >
-            Connect business
-          </button>
-        </GlassCard>
+            <button
+              type="button"
+              onClick={handleConnectClick}
+              className="group flex flex-col items-center rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.04] transition group-hover:border-white/30 group-hover:bg-white/[0.07]">
+                <Plus
+                  className="h-7 w-7 text-white/45 transition group-hover:text-white/65"
+                  strokeWidth={1.5}
+                />
+              </div>
+              <h3 className="mt-4 text-base font-semibold text-white">Add a business</h3>
+              <p className="mt-2 max-w-[260px] text-sm leading-relaxed text-white/45">
+                Business name and integration API key — verified before anything is stored.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={handleConnectClick}
+              className="mt-5 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/[0.1]"
+            >
+              Connect business
+            </button>
+          </GlassCard>
+        )}
       </div>
 
-      <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />
+      {!demo && <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />}
     </>
   );
 }

@@ -30,6 +30,7 @@ import {
 } from "recharts";
 import { sumColumn } from "@/lib/integrations/fetch-table-data";
 import { isDemoMode, showDemoRestriction } from "@/lib/demo";
+import { DemoBusinessDetail } from "@/components/dashboard/DemoBusinessDetail";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -237,6 +238,11 @@ export default function BusinessDetailPage() {
         </GlassCard>
       </div>
     );
+  }
+
+  // In demo mode show fully self-contained fake analytics — no real API calls.
+  if (isDemoMode()) {
+    return <DemoBusinessDetail business={business} />;
   }
 
   const kpis = deriveKpis(exploreData, seed);

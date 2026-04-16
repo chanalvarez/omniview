@@ -6,6 +6,7 @@ import { EditEntityModal } from "@/components/EditEntityModal";
 import { GlassCard } from "@/components/GlassCard";
 import type { CustomEntity } from "@/context/portfolio-entities-context";
 import { usePortfolioEntities } from "@/context/portfolio-entities-context";
+import { isDemoMode, showDemoConnect } from "@/lib/demo";
 import { Building2, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -16,6 +17,12 @@ export default function BusinessesPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<CustomEntity | null>(null);
   const [deleting, setDeleting] = useState<CustomEntity | null>(null);
+  const demo = isDemoMode();
+
+  const handleConnectClick = () => {
+    if (demo) { showDemoConnect(); return; }
+    setAddOpen(true);
+  };
 
   return (
     <div className="px-5 py-8 md:px-8 md:py-10 lg:px-12">
@@ -34,7 +41,7 @@ export default function BusinessesPage() {
         </div>
         <button
           type="button"
-          onClick={() => setAddOpen(true)}
+          onClick={handleConnectClick}
           className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/[0.12]"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
@@ -61,7 +68,7 @@ export default function BusinessesPage() {
             </p>
             <button
               type="button"
-              onClick={() => setAddOpen(true)}
+              onClick={handleConnectClick}
               className="mt-4 inline-flex items-center gap-2 rounded-xl border border-dashed border-white/20 px-4 py-2 text-sm text-white/70 transition hover:border-white/30 hover:text-white"
             >
               <Plus className="h-4 w-4" />
@@ -84,7 +91,11 @@ export default function BusinessesPage() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-white">{e.name}</p>
-                                  {e.integrationConnected ? (
+                          {demo ? (
+                            <span className="rounded-full border border-violet-400/25 bg-violet-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-300/90">
+                              Simulated
+                            </span>
+                          ) : e.integrationConnected ? (
                             <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300/95">
                               Connected
                             </span>
@@ -111,51 +122,51 @@ export default function BusinessesPage() {
                     </div>
                   </GlassCard>
                 </Link>
-                <div className="flex shrink-0 flex-col gap-1.5 py-0.5 sm:flex-row sm:items-center">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(e)}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:border-white/18 hover:bg-white/[0.08] hover:text-white"
-                    aria-label={`Edit ${e.name}`}
-                    title="Edit business"
-                  >
-                    <Pencil className="h-4 w-4" strokeWidth={2} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeleting(e)}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-rose-400/20 bg-rose-500/[0.07] text-rose-300/90 transition hover:border-rose-400/35 hover:bg-rose-500/15"
-                    aria-label={`Delete ${e.name}`}
-                    title="Delete business"
-                  >
-                    <Trash2 className="h-4 w-4" strokeWidth={2} />
-                  </button>
-                </div>
+                {!demo && (
+                  <div className="flex shrink-0 flex-col gap-1.5 py-0.5 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(e)}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:border-white/18 hover:bg-white/[0.08] hover:text-white"
+                      aria-label={`Edit ${e.name}`}
+                      title="Edit business"
+                    >
+                      <Pencil className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleting(e)}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-rose-400/20 bg-rose-500/[0.07] text-rose-300/90 transition hover:border-rose-400/35 hover:bg-rose-500/15"
+                      aria-label={`Delete ${e.name}`}
+                      title="Delete business"
+                    >
+                      <Trash2 className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />
-      <EditEntityModal
-        entity={editing}
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null);
-        }}
-        onSave={(id, input) => updateEntity(id, input)}
-      />
-      <ConfirmDeleteEntityModal
-        entityName={deleting?.name ?? null}
-        open={deleting !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleting(null);
-        }}
-        onConfirm={() => {
-          if (deleting) void removeEntity(deleting.id);
-        }}
-      />
+      {!demo && (
+        <>
+          <AddEntityModal open={addOpen} onOpenChange={setAddOpen} />
+          <EditEntityModal
+            entity={editing}
+            open={editing !== null}
+            onOpenChange={(open) => { if (!open) setEditing(null); }}
+            onSave={(id, input) => updateEntity(id, input)}
+          />
+          <ConfirmDeleteEntityModal
+            entityName={deleting?.name ?? null}
+            open={deleting !== null}
+            onOpenChange={(open) => { if (!open) setDeleting(null); }}
+            onConfirm={() => { if (deleting) void removeEntity(deleting.id); }}
+          />
+        </>
+      )}
     </div>
   );
 }
