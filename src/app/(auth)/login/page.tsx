@@ -4,8 +4,12 @@ import { OmniViewLogo } from "@/components/OmniViewLogo";
 import { isDemoMode, showDemoRestriction } from "@/lib/demo";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
+import { ClipboardCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+
+const DEMO_EMAIL    = "demo@omniview.com";
+const DEMO_PASSWORD = "demo123";
 
 type Mode = "signin" | "register";
 
@@ -122,6 +126,7 @@ function LoginPortalInner() {
           <button
             type="button"
             onClick={() => {
+              if (isDemoMode()) { showDemoRestriction(); return; }
               setMode("register");
               setError(null);
             }}
@@ -135,6 +140,38 @@ function LoginPortalInner() {
           </button>
         </div>
 
+        {/* Demo credentials hint — only shown in demo mode on sign-in tab */}
+        {isDemoMode() && mode === "signin" && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.15 }}
+            className="relative z-[1] mt-6 rounded-2xl border border-violet-400/25 bg-violet-500/10 p-4"
+          >
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-300/80">
+              Demo credentials
+            </p>
+            <div className="space-y-1 font-mono text-sm text-white/80">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-white/50 text-xs">Email</span>
+                <span className="text-white/90">{DEMO_EMAIL}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-white/50 text-xs">Password</span>
+                <span className="text-white/90">{DEMO_PASSWORD}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); }}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/15 py-2 text-xs font-medium text-violet-200 transition hover:bg-violet-500/25"
+            >
+              <ClipboardCheck className="h-3.5 w-3.5" strokeWidth={2} />
+              Use demo credentials
+            </button>
+          </motion.div>
+        )}
+
         <AnimatePresence mode="wait">
           {mode === "signin" ? (
             <motion.div
@@ -144,7 +181,7 @@ function LoginPortalInner() {
               exit={{ opacity: 0, rotateY: 8 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
               style={{ transformStyle: "preserve-3d", perspective: 1200 }}
-              className="relative z-[1] mt-8"
+              className="relative z-[1] mt-6"
             >
               <form onSubmit={submitSignIn} className="space-y-4">
                 <div>
