@@ -97,8 +97,9 @@ function DemoConnectModal({
           This is a demo
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-white/70">
-          Connecting a real business is disabled in demo mode. This feature is
-          available in the full product — contact me to get started.
+          This action is disabled in demo mode. To protect our active clients
+          and their data, certain features are restricted in this preview.
+          Contact me for more information.
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button
