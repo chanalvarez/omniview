@@ -43,4 +43,4 @@ You should see four sample businesses. The home dashboard shows **sample** portf
 
 ## Hire / contact
 
-[Fiverr — chanalvarez](https://www.fiverr.com/chanalvarez)
+[craydev.vercel.app/#contact](https://craydev.vercel.app/#contact)

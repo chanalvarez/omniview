@@ -7,7 +7,7 @@ import {
 } from "@/lib/demo";
 import { useEffect, useState } from "react";
 
-const FIVERR_URL = "https://www.fiverr.com/chanalvarez";
+const CONTACT_URL = "https://craydev.vercel.app/#contact";
 
 const bannerStyle: React.CSSProperties = {
   background: "rgba(0,0,0,0.85)",
@@ -51,8 +51,9 @@ function DemoRestrictionModal({
           Demo Restriction
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-white/70">
-          This action is disabled in demo mode. Contact me to see the full
-          version.
+          This action is disabled in demo mode. To protect our active clients
+          and their data, certain features are restricted in this preview.
+          Contact me for more information.
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button
@@ -63,12 +64,12 @@ function DemoRestrictionModal({
             Got it
           </button>
           <a
-            href={FIVERR_URL}
+            href={CONTACT_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/25"
           >
-            Hire Me on Fiverr
+            Contact Me
           </a>
         </div>
       </div>
@@ -108,7 +109,7 @@ function DemoConnectModal({
             Got it
           </button>
           <a
-            href={FIVERR_URL}
+            href={CONTACT_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/15 px-4 py-2.5 text-sm font-medium text-blue-200 transition hover:bg-blue-500/25"
@@ -149,12 +150,12 @@ export function DemoGuard({ children }: { children: React.ReactNode }) {
           🔍 Demo Mode — Data is simulated. This is a portfolio preview.
         </span>
         <a
-          href={FIVERR_URL}
+          href={CONTACT_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/15"
         >
-          View on Fiverr
+          Contact Me
         </a>
       </div>
       <div className="pt-[52px]">{children}</div>
